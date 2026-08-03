@@ -22,6 +22,7 @@ import {
 import { addDays, formatISODate, parseISODate } from "@/src/domain/dates";
 import { fetchLocationWeather, type DailyWeather } from "@/src/domain/open-meteo";
 import { describeWeatherCode } from "@/src/domain/weather-codes";
+import DiscoverMap, { googleMapsUrl, hasCoords } from "./discover-map";
 
 type TabId =
   | "overview"
@@ -555,18 +556,29 @@ function Bookings({ trip, copied, onCopy }: { trip: Trip; copied: string | null;
 function Discover({ trip }: { trip: Trip }) {
   const [filter, setFilter] = useState("Alle");
   const visible = filter === "Alle" ? trip.places : trip.places.filter((place) => place.type === filter);
+  const home = {
+    lat: trip.meta.destinationLat,
+    lon: trip.meta.destinationLon,
+    title: trip.accommodation.name,
+    subtitle: `Eure Finca · ${trip.accommodation.area}`,
+  };
   return (
     <section className="page inner-page">
       <PageIntro eyebrow="ENTDECKEN" title="Orte, die nach Inselzeit schmecken." copy="Deine Merkliste für Buchten, Dörfer, gutes Essen und die besten Aussichten." />
       <div className="filter-row">{placeTypes(trip).map((item) => <button key={item} onClick={() => setFilter(item)} className={filter === item ? "active" : ""}>{item}</button>)}</div>
       <div className="places-layout">
-        <div className="map-card card" aria-label="Stilisierte Übersichtskarte von Ibiza">
-          <div className="island-shape"><span className="pin pin-one">1</span><span className="pin pin-two">2</span><span className="pin pin-three">3</span><span className="pin pin-four">4</span></div>
-          <div className="map-label north">N</div><div className="map-label ibiza">IBIZA</div><div className="map-label sea">Mittelmeer</div>
-        </div>
+        <DiscoverMap home={home} places={visible} />
         <div className="place-grid">
           {visible.map((place, index) => (
-            <article className="card place-card" key={place.name}><span className={`place-color ${place.color}`}>{String(index + 1).padStart(2, "0")}</span><div><small>{place.type} · {place.area}</small><h2>{place.name}</h2><p>{place.note}</p></div><button aria-label={`${place.name} öffnen`}>↗</button></article>
+            <article className="card place-card" key={place.name}>
+              <span className={`place-color ${place.color}`}>{String(index + 1).padStart(2, "0")}</span>
+              <div><small>{place.type} · {place.area}</small><h2>{place.name}</h2><p>{place.note}</p></div>
+              {hasCoords(place) ? (
+                <a className="place-open" href={googleMapsUrl(place.lat, place.lon)} target="_blank" rel="noopener noreferrer" aria-label={`${place.name} in Google Maps öffnen`}>↗</a>
+              ) : (
+                <span className="place-open place-open-disabled" aria-hidden="true">↗</span>
+              )}
+            </article>
           ))}
         </div>
       </div>

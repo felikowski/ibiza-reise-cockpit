@@ -59,6 +59,8 @@ export interface Place {
   area: string;
   note: string;
   color: string;
+  lat?: number;
+  lon?: number;
 }
 
 export interface BudgetCategory {

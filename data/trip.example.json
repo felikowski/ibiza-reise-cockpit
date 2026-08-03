@@ -11,9 +11,9 @@
     "originCity": "Berlin",
     "originLat": 52.52,
     "originLon": 13.405,
-    "destinationCity": "Ibiza",
-    "destinationLat": 38.9067,
-    "destinationLon": 1.4206
+    "destinationCity": "Sant Miquel de Balansat",
+    "destinationLat": 39.0549,
+    "destinationLon": 1.4372
   },
   "flights": {
     "outbound": {
@@ -49,7 +49,7 @@
   },
   "accommodation": {
     "name": "Finca Sa Font",
-    "area": "Santa Gertrudis",
+    "area": "Sant Miquel de Balansat",
     "dateRangeLabel": "09.–16. Sep · 7 Nächte",
     "notes": "Frühstück inkl.",
     "referenceCode": "FS-21984",
@@ -179,12 +179,30 @@
     }
   ],
   "places": [
-    { "name": "Es Vedrà", "type": "Aussicht", "area": "Südwesten", "note": "Zum Sonnenuntergang", "color": "lavender" },
-    { "name": "Cala Xarraca", "type": "Strand", "area": "Norden", "note": "Klares Wasser · früh hin", "color": "aqua" },
-    { "name": "Dalt Vila", "type": "Kultur", "area": "Ibiza-Stadt", "note": "Abends durch die Gassen", "color": "sand" },
-    { "name": "Mercat de Forada", "type": "Essen", "area": "Buscastell", "note": "Samstags · lokal", "color": "peach" },
-    { "name": "Ses Illetes", "type": "Strand", "area": "Formentera", "note": "Fähre vorab buchen", "color": "sky" },
-    { "name": "Santa Gertrudis", "type": "Essen", "area": "Inselmitte", "note": "Cafés & kleine Läden", "color": "sage" }
+    { "name": "Casey's Irish Bar", "type": "Bar", "area": "Port de Sant Miquel", "note": "Livemusik & Cocktails direkt am Hafen, 5 Autominuten von der Finca", "color": "sun", "lat": 39.07953, "lon": 1.43974 },
+    { "name": "Tasca Los Molina", "type": "Bar", "area": "Port de Sant Miquel", "note": "Gemütliche Tapas-Bar am Hafen", "color": "peach", "lat": 39.07655, "lon": 1.44124 },
+    { "name": "Can Rei", "type": "Essen", "area": "Sant Miquel de Balansat", "note": "Ibizenkische Küche, ein paar Gehminuten von der Finca", "color": "sage", "lat": 39.05528, "lon": 1.43769 },
+    { "name": "Ca Na Hathai", "type": "Essen", "area": "Sant Miquel de Balansat", "note": "Authentisch thailändisch, mitten im Dorf", "color": "lavender", "lat": 39.05428, "lon": 1.4373 },
+    { "name": "Port Balansat", "type": "Essen", "area": "Port de Sant Miquel", "note": "Fisch & Meeresfrüchte mit Meerblick", "color": "sky", "lat": 39.08004, "lon": 1.43964 },
+    { "name": "Escándalo", "type": "Essen", "area": "Port de Sant Miquel", "note": "Entspanntes Strandrestaurant", "color": "sand", "lat": 39.0787, "lon": 1.43984 },
+    { "name": "Spar Port de Sant Miquel", "type": "Supermarkt", "area": "Port de Sant Miquel", "note": "Nächstgelegener Supermarkt, ca. 4 Autominuten", "color": "aqua", "lat": 39.07823, "lon": 1.43992 },
+    { "name": "Eroski City", "type": "Supermarkt", "area": "Richtung Santa Gertrudis", "note": "Größerer Supermarkt für den Wocheneinkauf", "color": "peach", "lat": 38.99718, "lon": 1.43033 },
+    { "name": "Cova de Can Marçà", "type": "Höhle", "area": "Port de Sant Miquel", "note": "Tropfsteinhöhle direkt bei der Finca", "color": "sage", "lat": 39.0832, "lon": 1.4423 },
+    { "name": "Cala Xarraca", "type": "Strand", "area": "Norden", "note": "Klares Wasser · früh hin", "color": "aqua", "lat": 39.0985, "lon": 1.4964 },
+    { "name": "Cala Benirràs", "type": "Strand", "area": "Norden", "note": "Sonntags Trommelkreis zum Sonnenuntergang", "color": "sand", "lat": 39.0894, "lon": 1.4539 },
+    { "name": "Cala Comte", "type": "Strand", "area": "Westen", "note": "Postkarten-Sonnenuntergang, früh kommen", "color": "aqua", "lat": 38.9629, "lon": 1.2213 },
+    { "name": "Cala Salada", "type": "Strand", "area": "Westen", "note": "Türkises Wasser, kaum Wellen", "color": "sky", "lat": 39.0095, "lon": 1.2991 },
+    { "name": "Cala d'Hort", "type": "Strand", "area": "Südwesten", "note": "Bester Blick auf Es Vedrà", "color": "lavender", "lat": 38.8899, "lon": 1.2246 },
+    { "name": "Aigües Blanques", "type": "Strand", "area": "Osten", "note": "Naturstrand mit FKK-Bereich", "color": "peach", "lat": 39.0599, "lon": 1.5892 },
+    { "name": "Es Vedrà", "type": "Aussicht", "area": "Südwesten", "note": "Zum Sonnenuntergang", "color": "lavender", "lat": 38.8667, "lon": 1.1979 },
+    { "name": "Dalt Vila", "type": "Kultur", "area": "Ibiza-Stadt", "note": "Abends durch die Gassen", "color": "sand", "lat": 38.9074, "lon": 1.4358 },
+    { "name": "Mercat de Forada", "type": "Essen", "area": "Buscastell", "note": "Samstags · lokal", "color": "peach", "lat": 39.0041, "lon": 1.3508 },
+    { "name": "Ses Illetes", "type": "Strand", "area": "Formentera", "note": "Fähre vorab buchen", "color": "sky", "lat": 38.7537, "lon": 1.4321 },
+    { "name": "Santa Gertrudis", "type": "Essen", "area": "Inselmitte", "note": "Cafés & kleine Läden", "color": "sage", "lat": 38.9982, "lon": 1.4285 },
+    { "name": "Pacha", "type": "Club", "area": "Ibiza-Stadt", "note": "Der Klassiker seit 1973", "color": "lavender", "lat": 38.9184, "lon": 1.4433 },
+    { "name": "Amnesia", "type": "Club", "area": "San Rafael", "note": "Legendäre Terrace-Partys", "color": "sky", "lat": 38.9477, "lon": 1.4082 },
+    { "name": "Ushuaïa", "type": "Club", "area": "Playa d'en Bossa", "note": "Tagesparty direkt am Strand", "color": "sand", "lat": 38.885, "lon": 1.4054 },
+    { "name": "Hï Ibiza", "type": "Club", "area": "Playa d'en Bossa", "note": "Nachfolger von Space, edler Sound", "color": "aqua", "lat": 38.886, "lon": 1.4039 }
   ],
   "budget": {
     "totalBudget": 3000,

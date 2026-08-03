@@ -62,6 +62,8 @@ const placeSchema = z.object({
   area: z.string().min(1),
   note: z.string(),
   color: z.string().min(1),
+  lat: z.number().min(-90).max(90).optional(),
+  lon: z.number().min(-180).max(180).optional(),
 });
 
 const budgetCategorySchema = z.object({
