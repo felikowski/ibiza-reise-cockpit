@@ -3,17 +3,19 @@
 ## 1. Product snapshot
 
 The project is a polished German-language travel dashboard for an Ibiza trip.
-It currently uses fictional example data for 12–19 September 2026 and is live
+It currently uses fictional example data for 9–16 September 2026 and is live
 at:
 
 https://ibiza.srv1115517.hstgr.cloud
 
 Implemented sections:
 
-- Übersicht: countdown, next flight, weather, week preview, readiness and budget
+- Übersicht: countdown, next flight, weather glimpse, week preview, readiness and budget
 - Reiseplan: selectable days with a detailed timeline
 - Buchungen: flights, accommodation, rental car and copyable references
 - Entdecken: filterable places and a stylized map
+- Wetter: live daily forecast for the destination, plus four Berlin reference
+  days (departure, arrival, return flight, day after)
 - Budget: totals, categories and payment status
 - Packen: interactive checklist
 - Dokumente & Infos: document status, practical facts and emergency contacts

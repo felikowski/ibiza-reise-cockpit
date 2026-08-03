@@ -27,6 +27,16 @@ only. Communicate with the user in German unless asked otherwise.
   with timestamped backups under `/data/backups/`
 - packing checklist state itself still lives in browser state only (resets on
   reload); only the trip *content* is persisted
+- weather is live, not admin-edited: `src/domain/open-meteo.ts` calls the
+  free, keyless Open-Meteo API directly from the browser (CORS-enabled, no
+  backend involvement). Real forecasts only exist ~15 days out — dates
+  further away automatically fall back to a same-calendar-day average over
+  the last 5 years, clearly labeled in the UI (`kind: "forecast" |
+  "recorded" | "average"`) so it never claims false precision. `meta.
+  originLat/originLon/destinationLat/destinationLon` in the trip model drive
+  which two locations get fetched (Übersicht mini-card + the dedicated
+  Wetter tab, which also compares the four Berlin reference days: departure,
+  arrival, return flight, day after return)
 - two production Docker images: the frontend (nginx serving the static
   export, `Dockerfile`) and the api/admin service (`server/Dockerfile`),
   both deployed to a self-managed VPS behind Traefik at

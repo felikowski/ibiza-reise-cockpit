@@ -37,18 +37,6 @@ export interface RentalCar {
   status: BookingStatus;
 }
 
-export interface WeatherForecastDay {
-  day: string;
-  temp: string;
-  cloudy: boolean;
-}
-
-export interface Weather {
-  currentTemp: string;
-  feelsLike: string;
-  forecast: WeatherForecastDay[];
-}
-
 export interface TimelineEntry {
   time: string;
   title: string;
@@ -128,6 +116,12 @@ export interface TripMeta {
   accommodationLabel: string;
   startDate: string;
   endDate: string;
+  originCity: string;
+  originLat: number;
+  originLon: number;
+  destinationCity: string;
+  destinationLat: number;
+  destinationLon: number;
 }
 
 export interface InsiderTip {
@@ -148,7 +142,6 @@ export interface Trip {
   };
   accommodation: Accommodation;
   rentalCar: RentalCar;
-  weather: Weather;
   itineraryDays: ItineraryDay[];
   places: Place[];
   budget: Budget;

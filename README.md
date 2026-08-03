@@ -15,6 +15,10 @@ Läuft produktiv unter:
 - filterbare Orte
 - kopierbare Buchungsnummern
 - interaktive Packliste
+- eigener Wetter-Tab mit Live-Daten von [Open-Meteo](https://open-meteo.com)
+  für das Reiseziel (Tag für Tag) und vier Vergleichstage in Berlin (Abflug,
+  Ankunft, Rückflug, Tag danach) — echte Vorhersage innerhalb von ~15 Tagen,
+  sonst ein klar gekennzeichneter Ø-Wert der letzten 5 Jahre
 - alle Reisedaten kommen aus einem typisierten, validierten JSON-Modell
   (`src/domain/trip.ts` + `src/domain/validate-trip.ts`), Countdown, Budget-
   und Bereitschafts-Prozente werden daraus abgeleitet statt hart codiert
@@ -61,6 +65,7 @@ docker build -t ibiza-reise-cockpit-api -f server/Dockerfile .
 - `app/globals.css` – vollständiges responsives Design
 - `src/domain/trip.ts`, `src/domain/validate-trip.ts` – Datenmodell + Zod-Schema
 - `src/domain/derive-trip.ts` – abgeleitete Werte (Countdown, Budget, Bereitschaft)
+- `src/domain/open-meteo.ts`, `src/domain/weather-codes.ts` – Live-Wetter (Client-seitig, kein Backend nötig)
 - `data/trip.example.json` – Beispieldaten, dienen als Seed für ein leeres Volume
 - `server/` – kleiner Express-Server: `GET /api/trip` (öffentlich),
   `GET /admin` + `POST /admin/api/trip` (Basic-Auth-geschützt)

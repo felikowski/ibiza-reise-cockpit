@@ -40,18 +40,6 @@ const rentalCarSchema = z.object({
   status: bookingStatusSchema,
 });
 
-const weatherForecastDaySchema = z.object({
-  day: z.string().min(1),
-  temp: z.string().min(1),
-  cloudy: z.boolean(),
-});
-
-const weatherSchema = z.object({
-  currentTemp: z.string().min(1),
-  feelsLike: z.string().min(1),
-  forecast: z.array(weatherForecastDaySchema).min(1),
-});
-
 const timelineEntrySchema = z.object({
   time: z.string().min(1),
   title: z.string().min(1),
@@ -131,6 +119,12 @@ const tripMetaSchema = z.object({
   accommodationLabel: z.string().min(1),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD"),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD"),
+  originCity: z.string().min(1),
+  originLat: z.number().min(-90).max(90),
+  originLon: z.number().min(-180).max(180),
+  destinationCity: z.string().min(1),
+  destinationLat: z.number().min(-90).max(90),
+  destinationLon: z.number().min(-180).max(180),
 });
 
 const insiderTipSchema = z.object({
@@ -151,7 +145,6 @@ export const tripSchema = z.object({
   }),
   accommodation: accommodationSchema,
   rentalCar: rentalCarSchema,
-  weather: weatherSchema,
   itineraryDays: z.array(itineraryDaySchema).min(1),
   places: z.array(placeSchema),
   budget: budgetSchema,

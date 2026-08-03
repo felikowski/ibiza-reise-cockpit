@@ -147,7 +147,32 @@ button { color: inherit; }
 
 .documents-layout { display: grid; grid-template-columns: 1.5fr .7fr; gap: 16px; }.documents-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }.document-card { padding: 22px; display: grid; grid-template-columns: 43px 1fr auto; align-items: center; gap: 13px; }.document-card > span { width: 42px; height: 52px; border-radius: 4px; background: #e7ede8; display: grid; place-items: center; color: #5f806c; font: 800 10px var(--serif); }.document-card h2 { margin: 0; font: 700 17px var(--serif); }.document-card p { margin: 4px 0 0; color: var(--muted); font-size: 8px; }.document-card > i { color: #547961; background: #e4eee6; border-radius: 99px; padding: 5px 8px; font-style: normal; font-size: 7px; font-weight: 800; }.document-card > i.waiting { color: #9b6b39; background: #f4e5c9; }.emergency-card { grid-row: span 2; padding: 29px; background: var(--coral-deep); color: white; }.emergency-card h2 { font: 700 29px var(--serif); margin: 18px 0 20px; }.emergency-card > div:not(.eyebrow) { border-top: 1px solid rgba(255,255,255,.22); padding: 13px 0; }.emergency-card > div span { display: block; color: rgba(255,255,255,.65); font-size: 8px; }.emergency-card a { color: white; text-decoration: none; display: block; margin-top: 4px; font: 700 16px var(--serif); }.emergency-card > p { color: rgba(255,255,255,.72); font: italic 11px/1.5 var(--serif); margin-top: 25px; }.practical-card { padding: 25px; }.fact-grid { display: grid; grid-template-columns: repeat(4,1fr); margin-top: 25px; }.fact-grid span { border-left: 1px solid var(--line); padding-left: 15px; }.fact-grid span:first-child { border-left: 0; padding-left: 0; }.fact-grid small, .fact-grid b { display: block; }.fact-grid small { color: var(--muted); font-size: 8px; }.fact-grid b { font: 700 13px var(--serif); margin-top: 5px; }
 
+.weather-status { color: var(--muted); font-size: 12px; padding: 20px 0; }
+.weather-status.card { margin: 24px max(4.5vw, 28px) 0; padding: 24px; max-width: calc(1400px - 9vw); }
+.weather-layout { max-width: 1400px; margin: 29px auto 0; padding: 0 max(4.5vw, 28px); display: grid; grid-template-columns: 1.5fr 1fr; gap: 18px; }
+.weather-detail-card, .weather-berlin-card { padding: 26px 29px; }
+.weather-day-grid { margin-top: 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.weather-day { border: 1px solid var(--line); border-radius: 8px; padding: 14px 10px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.weather-day span { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+.weather-day i { font-style: normal; font-size: 22px; margin: 4px 0; }
+.weather-day b { font: 700 20px var(--serif); }
+.weather-day small { color: var(--muted); font-size: 10px; }
+.weather-kind { margin-top: 6px; font-style: normal; font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; padding: 3px 6px; border-radius: 99px; }
+.weather-kind-forecast { background: #dbe9de; color: #365a44; }
+.weather-kind-recorded { background: #e0e6ea; color: #3d5566; }
+.weather-kind-average { background: #f4e5c9; color: #8a611f; }
+.weather-berlin-grid { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+.weather-berlin-row { display: grid; grid-template-columns: 1fr 24px auto auto; align-items: center; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.weather-berlin-row:first-child { border-top: 0; padding-top: 0; }
+.weather-berlin-row span { display: flex; flex-direction: column; font-size: 11px; font-weight: 700; }
+.weather-berlin-row span small { color: var(--muted); font-weight: 400; font-size: 9px; margin-top: 2px; }
+.weather-berlin-row i { font-style: normal; font-size: 18px; text-align: center; }
+.weather-berlin-row b { font: 700 13px var(--serif); text-align: right; }
+
 @media (max-width: 1050px) {
+  .weather-layout { grid-template-columns: 1fr; }
+  .weather-day-grid { grid-template-columns: repeat(4, 1fr); }
+
   .topbar { padding: 0 24px; gap: 15px; }.brand { min-width: 130px; }.brand small { display: none; }.tab { padding: 0 8px; font-size: 11px; }.tab-symbol { display: none; }
   .next-card, .weather-card, .itinerary-card, .prep-card, .budget-mini-card, .tip-card { grid-column: span 6; }
   .readiness { align-items: flex-start; }.mini-day p span { display: none; }

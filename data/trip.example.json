@@ -6,12 +6,18 @@
     "routeTo": "IBZ",
     "travelersCount": 2,
     "accommodationLabel": "Finca & Mietwagen",
-    "startDate": "2026-09-12",
-    "endDate": "2026-09-19"
+    "startDate": "2026-09-09",
+    "endDate": "2026-09-16",
+    "originCity": "Berlin",
+    "originLat": 52.52,
+    "originLon": 13.405,
+    "destinationCity": "Ibiza",
+    "destinationLat": 38.9067,
+    "destinationLon": 1.4206
   },
   "flights": {
     "outbound": {
-      "dateLabel": "12. Sep",
+      "dateLabel": "09. Sep",
       "departureTime": "08:25",
       "departureAirport": "BER",
       "departureCity": "Berlin",
@@ -26,7 +32,7 @@
       "referenceCode": "IBZ7X2"
     },
     "return": {
-      "dateLabel": "Sa, 19. Sep",
+      "dateLabel": "Mi, 16. Sep",
       "departureTime": "12:05",
       "departureAirport": "IBZ",
       "departureCity": "Ibiza",
@@ -44,7 +50,7 @@
   "accommodation": {
     "name": "Finca Sa Font",
     "area": "Santa Gertrudis",
-    "dateRangeLabel": "12.–19. Sep · 7 Nächte",
+    "dateRangeLabel": "09.–16. Sep · 7 Nächte",
     "notes": "Frühstück inkl.",
     "referenceCode": "FS-21984",
     "status": "confirmed"
@@ -53,25 +59,15 @@
     "category": "Kompakt SUV",
     "provider": "Centauro",
     "notes": "Vollkasko",
-    "pickupLabel": "12. Sep, 11:45",
-    "dropoffLabel": "19. Sep, 09:30",
+    "pickupLabel": "09. Sep, 11:45",
+    "dropoffLabel": "16. Sep, 09:30",
     "referenceCode": "CTR-8841",
     "status": "confirmed"
   },
-  "weather": {
-    "currentTemp": "28°",
-    "feelsLike": "29°",
-    "forecast": [
-      { "day": "Sa", "temp": "28°", "cloudy": false },
-      { "day": "So", "temp": "29°", "cloudy": false },
-      { "day": "Mo", "temp": "27°", "cloudy": true },
-      { "day": "Di", "temp": "28°", "cloudy": false }
-    ]
-  },
   "itineraryDays": [
     {
-      "weekday": "Sa",
-      "dateLabel": "12. Sep",
+      "weekday": "Mi",
+      "dateLabel": "09. Sep",
       "title": "Ankommen & einchecken",
       "note": "Flug, Mietwagen, Finca",
       "tone": "sun",
@@ -84,8 +80,8 @@
       ]
     },
     {
-      "weekday": "So",
-      "dateLabel": "13. Sep",
+      "weekday": "Do",
+      "dateLabel": "10. Sep",
       "title": "Nordküste",
       "note": "Cala Xarraca · Sunset",
       "tone": "water",
@@ -98,8 +94,8 @@
       ]
     },
     {
-      "weekday": "Mo",
-      "dateLabel": "14. Sep",
+      "weekday": "Fr",
+      "dateLabel": "11. Sep",
       "title": "Altstadt & Tapas",
       "note": "Dalt Vila · La Marina",
       "tone": "peach",
@@ -112,8 +108,8 @@
       ]
     },
     {
-      "weekday": "Di",
-      "dateLabel": "15. Sep",
+      "weekday": "Sa",
+      "dateLabel": "12. Sep",
       "title": "Formentera",
       "note": "Fähre · Roller · Strand",
       "tone": "water",
@@ -126,8 +122,8 @@
       ]
     },
     {
-      "weekday": "Mi",
-      "dateLabel": "16. Sep",
+      "weekday": "So",
+      "dateLabel": "13. Sep",
       "title": "Freier Tag",
       "note": "Pool · Markt · spontan",
       "tone": "sage",
@@ -140,8 +136,8 @@
       ]
     },
     {
-      "weekday": "Do",
-      "dateLabel": "17. Sep",
+      "weekday": "Mo",
+      "dateLabel": "14. Sep",
       "title": "Beach Club",
       "note": "Lunch · Cala Jondal",
       "tone": "peach",
@@ -154,8 +150,8 @@
       ]
     },
     {
-      "weekday": "Fr",
-      "dateLabel": "18. Sep",
+      "weekday": "Di",
+      "dateLabel": "15. Sep",
       "title": "Es Vedrà",
       "note": "Aussicht · Abschiedsessen",
       "tone": "sun",
@@ -168,8 +164,8 @@
       ]
     },
     {
-      "weekday": "Sa",
-      "dateLabel": "19. Sep",
+      "weekday": "Mi",
+      "dateLabel": "16. Sep",
       "title": "Heimreise",
       "note": "Check-out · Rückflug",
       "tone": "stone",
@@ -217,7 +213,7 @@
     { "title": "Personalausweis", "meta": "Gültig bis 03/2031", "status": "Geprüft", "symbol": "ID" },
     { "title": "Führerschein", "meta": "Für Mietwagen benötigt", "status": "Geprüft", "symbol": "DL" },
     { "title": "Reiseversicherung", "meta": "Police EU-204984", "status": "Gespeichert", "symbol": "+" },
-    { "title": "Bordkarten", "meta": "Verfügbar ab 11. Sep", "status": "Ausstehend", "symbol": "✦" }
+    { "title": "Bordkarten", "meta": "Verfügbar ab 08. Sep", "status": "Ausstehend", "symbol": "✦" }
   ],
   "emergencyContacts": [
     { "label": "EU-Notruf", "phone": "112" },
@@ -236,6 +232,6 @@
   "checkInReminder": {
     "title": "24 Stunden vorher",
     "note": "Online-Check-in öffnen, Bordkarten speichern und Abholzeit für den Mietwagen bestätigen.",
-    "dateLabel": "11. Sep"
+    "dateLabel": "08. Sep"
   }
 }

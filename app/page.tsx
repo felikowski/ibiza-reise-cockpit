@@ -16,7 +16,12 @@ import {
   packingTotals,
   placeTypes,
   readinessPercent,
+  berlinComparisonDays,
+  tripDates,
 } from "@/src/domain/derive-trip";
+import { addDays, formatISODate, parseISODate } from "@/src/domain/dates";
+import { fetchLocationWeather, type DailyWeather } from "@/src/domain/open-meteo";
+import { describeWeatherCode } from "@/src/domain/weather-codes";
 
 type TabId =
   | "overview"
@@ -25,17 +30,24 @@ type TabId =
   | "discover"
   | "budget"
   | "packing"
-  | "documents";
+  | "documents"
+  | "weather";
 
 const tabs: { id: TabId; label: string; symbol: string }[] = [
   { id: "overview", label: "Übersicht", symbol: "⌂" },
   { id: "plan", label: "Reiseplan", symbol: "◎" },
   { id: "bookings", label: "Buchungen", symbol: "◇" },
   { id: "discover", label: "Entdecken", symbol: "⌖" },
+  { id: "weather", label: "Wetter", symbol: "☀" },
   { id: "budget", label: "Budget", symbol: "€" },
   { id: "packing", label: "Packen", symbol: "✓" },
   { id: "documents", label: "Dokumente", symbol: "▤" },
 ];
+
+type WeatherState =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "ready"; destination: Map<string, DailyWeather>; origin: Map<string, DailyWeather> };
 
 type LoadState =
   | { status: "loading" }
@@ -102,6 +114,34 @@ function Dashboard({ trip }: { trip: Trip }) {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [packed, setPacked] = useState<Set<string>>(() => new Set(trip.packing.defaultPacked));
   const [copied, setCopied] = useState<string | null>(null);
+  const [weather, setWeather] = useState<WeatherState>({ status: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadWeather() {
+      try {
+        const dayAfterReturn = formatISODate(addDays(parseISODate(trip.meta.endDate), 1));
+        const [destination, origin] = await Promise.all([
+          fetchLocationWeather(trip.meta.destinationLat, trip.meta.destinationLon, trip.meta.startDate, trip.meta.endDate),
+          fetchLocationWeather(trip.meta.originLat, trip.meta.originLon, trip.meta.startDate, dayAfterReturn),
+        ]);
+        if (!cancelled) setWeather({ status: "ready", destination, origin });
+      } catch (error) {
+        if (!cancelled) {
+          setWeather({
+            status: "error",
+            message: error instanceof Error ? error.message : "Unbekannter Fehler",
+          });
+        }
+      }
+    }
+
+    loadWeather();
+    return () => {
+      cancelled = true;
+    };
+  }, [trip.meta.destinationLat, trip.meta.destinationLon, trip.meta.originLat, trip.meta.originLon, trip.meta.startDate, trip.meta.endDate]);
 
   const togglePacked = (item: string) => {
     setPacked((current) => {
@@ -159,11 +199,12 @@ function Dashboard({ trip }: { trip: Trip }) {
       <div className="mobile-section-title">{activeLabel}</div>
 
       {activeTab === "overview" && (
-        <Overview trip={trip} packed={packed} onNavigate={setActiveTab} />
+        <Overview trip={trip} packed={packed} weather={weather} onNavigate={setActiveTab} />
       )}
       {activeTab === "plan" && <TravelPlan trip={trip} />}
       {activeTab === "bookings" && <Bookings trip={trip} copied={copied} onCopy={copyReference} />}
       {activeTab === "discover" && <Discover trip={trip} />}
+      {activeTab === "weather" && <Weather trip={trip} weather={weather} />}
       {activeTab === "budget" && <Budget trip={trip} />}
       {activeTab === "packing" && (
         <Packing
@@ -182,10 +223,12 @@ function Dashboard({ trip }: { trip: Trip }) {
 function Overview({
   trip,
   packed,
+  weather,
   onNavigate,
 }: {
   trip: Trip;
   packed: Set<string>;
+  weather: WeatherState;
   onNavigate: (tab: TabId) => void;
 }) {
   const nights = nightsBetween(trip.meta);
@@ -237,16 +280,8 @@ function Overview({
         </section>
 
         <section className="card weather-card">
-          <CardHeader kicker="Vor Ort" title="Sonne in Sicht" />
-          <div className="weather-main">
-            <div className="weather-icon"><span /></div>
-            <div><strong>{trip.weather.currentTemp}</strong><span>Gefühlt {trip.weather.feelsLike}</span></div>
-          </div>
-          <div className="forecast">
-            {trip.weather.forecast.map((entry) => (
-              <div key={entry.day}><span>{entry.day}</span><i className={entry.cloudy ? "cloudy" : ""} /><b>{entry.temp}</b></div>
-            ))}
-          </div>
+          <CardHeader kicker="Vor Ort" title="Sonne in Sicht" action="Wetter im Detail" onAction={() => onNavigate("weather")} />
+          <OverviewWeather trip={trip} weather={weather} />
         </section>
 
         <section className="card itinerary-card">
@@ -299,6 +334,116 @@ function Overview({
       </div>
     </section>
   );
+}
+
+function OverviewWeather({ trip, weather }: { trip: Trip; weather: WeatherState }) {
+  if (weather.status === "loading") {
+    return <p className="weather-status">Lädt Wetterdaten …</p>;
+  }
+  if (weather.status === "error") {
+    return <p className="weather-status">Wetter derzeit nicht verfügbar.</p>;
+  }
+
+  const dates = tripDates(trip.meta);
+  const today = weather.destination.get(dates[0]);
+  if (!today) return <p className="weather-status">Keine Wetterdaten für diesen Zeitraum.</p>;
+  const todayInfo = describeWeatherCode(today.weatherCode);
+
+  return (
+    <>
+      <div className="weather-main">
+        <div className="weather-icon"><span aria-hidden="true">{todayInfo.symbol}</span></div>
+        <div><strong>{today.tempMax}°</strong><span>{todayInfo.label}{today.kind === "average" ? " · Ø" : ""}</span></div>
+      </div>
+      <div className="forecast">
+        {dates.slice(0, 4).map((date) => {
+          const day = weather.destination.get(date);
+          if (!day) return null;
+          const weekday = new Intl.DateTimeFormat("de-DE", { weekday: "short" }).format(parseISODate(date));
+          return (
+            <div key={date}><span>{weekday}</span><i>{describeWeatherCode(day.weatherCode).symbol}</i><b>{day.tempMax}°</b></div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+function Weather({ trip, weather }: { trip: Trip; weather: WeatherState }) {
+  if (weather.status === "loading") {
+    return (
+      <section className="page inner-page">
+        <PageIntro eyebrow="WETTER" title="Wie wird's auf Ibiza?" copy="Live-Vorhersage für dein Reiseziel, dazu Berlin im Vergleich." />
+        <p className="weather-status card">Lädt Wetterdaten …</p>
+      </section>
+    );
+  }
+  if (weather.status === "error") {
+    return (
+      <section className="page inner-page">
+        <PageIntro eyebrow="WETTER" title="Wie wird's auf Ibiza?" copy="Live-Vorhersage für dein Reiseziel, dazu Berlin im Vergleich." />
+        <p className="weather-status card">Wetterdaten konnten nicht geladen werden: {weather.message}</p>
+      </section>
+    );
+  }
+
+  const dates = tripDates(trip.meta);
+  const berlinDays = berlinComparisonDays(trip.meta);
+
+  return (
+    <section className="page inner-page">
+      <PageIntro eyebrow="WETTER" title="Wie wird's auf Ibiza?" copy="Live-Vorhersage für dein Reiseziel, dazu Berlin im Vergleich." />
+      <div className="weather-layout">
+        <div className="card weather-detail-card">
+          <CardHeader kicker={trip.meta.destinationCity} title="Reisewetter, Tag für Tag" />
+          <div className="weather-day-grid">
+            {dates.map((date) => {
+              const day = weather.destination.get(date);
+              if (!day) return null;
+              const info = describeWeatherCode(day.weatherCode);
+              const weekday = new Intl.DateTimeFormat("de-DE", { weekday: "short" }).format(parseISODate(date));
+              const dayNumber = parseISODate(date).getDate();
+              return (
+                <div className="weather-day" key={date}>
+                  <span>{weekday} {dayNumber}.</span>
+                  <i aria-hidden="true">{info.symbol}</i>
+                  <b>{day.tempMax}°</b>
+                  <small>{day.tempMin}°</small>
+                  <em className={`weather-kind weather-kind-${day.kind}`}>{weatherKindLabel(day.kind)}</em>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="card weather-berlin-card">
+          <CardHeader kicker={trip.meta.originCity} title="Zuhause im Vergleich" />
+          <div className="weather-berlin-grid">
+            {berlinDays.map((entry) => {
+              const day = weather.origin.get(entry.date);
+              if (!day) return null;
+              const info = describeWeatherCode(day.weatherCode);
+              const dateLabel = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit" }).format(parseISODate(entry.date));
+              return (
+                <div className="weather-berlin-row" key={entry.label}>
+                  <span>{entry.label}<small>{dateLabel}</small></span>
+                  <i aria-hidden="true">{info.symbol}</i>
+                  <b>{day.tempMax}° / {day.tempMin}°</b>
+                  <em className={`weather-kind weather-kind-${day.kind}`}>{weatherKindLabel(day.kind)}</em>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function weatherKindLabel(kind: DailyWeather["kind"]): string {
+  if (kind === "forecast") return "Vorhersage";
+  if (kind === "recorded") return "Aufgezeichnet";
+  return "Ø 5 Jahre";
 }
 
 function TravelPlan({ trip }: { trip: Trip }) {

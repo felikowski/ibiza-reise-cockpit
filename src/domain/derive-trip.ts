@@ -1,9 +1,5 @@
+import { addDays, enumerateDates, formatISODate, parseISODate } from "./dates";
 import type { Budget, BudgetCategory, DocumentItem, Packing, Trip, TripMeta } from "./trip";
-
-function parseISODate(value: string): Date {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
 
 export function formatEuro(amount: number): string {
   return `${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 }).format(amount)} €`;
@@ -84,4 +80,25 @@ export function placeTypes(trip: Trip): string[] {
   const seen = new Set<string>();
   for (const place of trip.places) seen.add(place.type);
   return ["Alle", ...seen];
+}
+
+export function tripDates(meta: TripMeta): string[] {
+  return enumerateDates(meta.startDate, meta.endDate);
+}
+
+export interface NamedDay {
+  label: string;
+  date: string;
+}
+
+/** The four Berlin reference days requested alongside the destination forecast:
+ * departure day, arrival-at-destination day, return-flight day, and the day after
+ * getting back. Departure/arrival share a date for a same-day short-haul flight. */
+export function berlinComparisonDays(meta: TripMeta): NamedDay[] {
+  return [
+    { label: "Abflug", date: meta.startDate },
+    { label: "Ankunft", date: meta.startDate },
+    { label: "Rückflug", date: meta.endDate },
+    { label: "Tag danach", date: formatISODate(addDays(parseISODate(meta.endDate), 1)) },
+  ];
 }
