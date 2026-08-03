@@ -60,8 +60,13 @@ async function submitPackingRequest(url: string, method: string, body?: unknown)
   return payload.trip as Trip;
 }
 
-function addPackingItem(groupTitle: string, label: string, assignedTo: string | null): Promise<Trip> {
-  return submitPackingRequest("/api/packing/items", "POST", { groupTitle, label, assignedTo });
+function addPackingItem(
+  groupTitle: string,
+  label: string,
+  scope: "personal" | "shared",
+  assignedTo: string | null,
+): Promise<Trip> {
+  return submitPackingRequest("/api/packing/items", "POST", { groupTitle, label, scope, assignedTo });
 }
 
 function patchPackingItem(itemId: string, patch: { checked?: boolean; assignedTo?: string | null }): Promise<Trip> {
@@ -621,8 +626,10 @@ function Budget({ trip }: { trip: Trip }) {
   );
 }
 
+const SHARED_TAB_ID = "shared";
+
 function Packing({ trip, onTripChange }: { trip: Trip; onTripChange: (trip: Trip) => void }) {
-  const [personTab, setPersonTab] = useState<string>(trip.packing.people[0]?.id ?? "all");
+  const [personTab, setPersonTab] = useState<string>(trip.packing.people[0]?.id ?? SHARED_TAB_ID);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const packingStats = packingTotals(trip.packing);
@@ -643,16 +650,17 @@ function Packing({ trip, onTripChange }: { trip: Trip; onTripChange: (trip: Trip
   const toggleChecked = (item: PackingItem) => run(() => patchPackingItem(item.id, { checked: !item.checked }));
   const removeItem = (item: PackingItem) => run(() => removePackingItem(item.id));
   const assignItem = (item: PackingItem, personId: string | null) => run(() => patchPackingItem(item.id, { assignedTo: personId }));
-  const addItem = (groupTitle: string, label: string, assignedTo: string | null) => run(() => addPackingItem(groupTitle, label, assignedTo));
+  const addItem = (groupTitle: string, label: string, scope: "personal" | "shared", assignedTo: string | null) =>
+    run(() => addPackingItem(groupTitle, label, scope, assignedTo));
 
-  const tabs = [...trip.packing.people.map((person) => ({ id: person.id, label: person.name })), { id: "all", label: "Alle" }];
+  const tabs = [...trip.packing.people.map((person) => ({ id: person.id, label: person.name })), { id: SHARED_TAB_ID, label: "Gesamt" }];
 
   return (
     <section className="page inner-page">
       <PageIntro eyebrow="PACKLISTE" title="Leicht packen. Nichts vergessen." copy="Die wichtigsten Dinge für Sonne, Strand und entspannte Abende." />
       <div className="packing-head card"><div className="packing-ring" style={{ "--progress": `${packingStats.percent * 3.6}deg` } as React.CSSProperties}><span>{packingStats.percent}<small>%</small></span></div><div><span>Dein Fortschritt</span><h2>{packingStats.packedCount} von {packingStats.total} eingepackt</h2><p>{packingStats.total - packingStats.packedCount === 0 ? "Fertig — der Urlaub kann kommen." : `Noch ${packingStats.total - packingStats.packedCount} Dinge, dann bist du startklar.`}</p></div></div>
 
-      <div className="packing-people" role="tablist" aria-label="Gepackt von">
+      <div className="packing-people" role="tablist" aria-label="Packbereiche">
         {tabs.map((tab) => (
           <button key={tab.id} className={personTab === tab.id ? "selected" : ""} onClick={() => setPersonTab(tab.id)} role="tab" aria-selected={personTab === tab.id}>
             {tab.label}
@@ -662,10 +670,26 @@ function Packing({ trip, onTripChange }: { trip: Trip; onTripChange: (trip: Trip
 
       {error && <p className="packing-error">{error}</p>}
 
-      {personTab === "all" ? (
-        <PackingAllView trip={trip} groupTitles={groupTitles} pending={pending} onToggle={toggleChecked} onRemove={removeItem} onAssign={assignItem} onAdd={addItem} />
+      {personTab === SHARED_TAB_ID ? (
+        <PackingSharedView
+          trip={trip}
+          groupTitles={groupTitles}
+          pending={pending}
+          onToggle={toggleChecked}
+          onRemove={removeItem}
+          onAssign={assignItem}
+          onAdd={(groupTitle, label, assignedTo) => addItem(groupTitle, label, "shared", assignedTo)}
+        />
       ) : (
-        <PackingPersonView trip={trip} personId={personTab} groupTitles={groupTitles} pending={pending} onToggle={toggleChecked} onRemove={removeItem} onAdd={(groupTitle, label) => addItem(groupTitle, label, personTab)} />
+        <PackingPersonView
+          trip={trip}
+          personId={personTab}
+          groupTitles={groupTitles}
+          pending={pending}
+          onToggle={toggleChecked}
+          onRemove={removeItem}
+          onAdd={(groupTitle, label) => addItem(groupTitle, label, "personal", personTab)}
+        />
       )}
     </section>
   );
@@ -689,7 +713,7 @@ function PackingPersonView({
   onAdd: (groupTitle: string, label: string, assignedTo: string | null) => void;
 }) {
   const groupsWithItems = trip.packing.groups
-    .map((group) => ({ title: group.title, items: group.items.filter((item) => item.assignedTo === personId) }))
+    .map((group) => ({ title: group.title, items: group.items.filter((item) => item.scope === "personal" && item.assignedTo === personId) }))
     .filter((group) => group.items.length > 0);
 
   return (
@@ -720,7 +744,7 @@ function PackingPersonView({
   );
 }
 
-function PackingAllView({
+function PackingSharedView({
   trip,
   groupTitles,
   pending,
@@ -737,12 +761,14 @@ function PackingAllView({
   onAssign: (item: PackingItem, personId: string | null) => void;
   onAdd: (groupTitle: string, label: string, assignedTo: string | null) => void;
 }) {
-  const groupsWithItems = trip.packing.groups.filter((group) => group.items.length > 0);
+  const groupsWithItems = trip.packing.groups
+    .map((group) => ({ title: group.title, items: group.items.filter((item) => item.scope === "shared") }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <>
       {groupsWithItems.length === 0 ? (
-        <p className="packing-empty card">Noch keine Punkte auf der Liste.</p>
+        <p className="packing-empty card">Noch keine gemeinsamen Punkte auf der Liste.</p>
       ) : (
         <div className="packing-grid">
           {groupsWithItems.map((group) => (

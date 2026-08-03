@@ -22,10 +22,14 @@ const DEFAULT_PACKING_PEOPLE = [
 export class TripValidationError extends Error {}
 export class PackingNotFoundError extends Error {}
 
-/** Upgrades the pre-per-person packing shape (string items + a flat
- * `defaultPacked` list, no `people`) to the current one, so existing
- * `trip.json` files (local or on the VPS) keep working without a manual
- * migration step. No-op once a file is already in the current shape. */
+/** Upgrades older packing shapes to the current one, so existing `trip.json`
+ * files (local or on the VPS) keep working without a manual migration step:
+ * - pre-per-person shape (string items + a flat `defaultPacked` list, no `people`)
+ * - pre-`scope` shape (items with `assignedTo` but no `scope` field)
+ * Items that already had a person in `assignedTo` become `scope: "personal"`
+ * so they stay in that person's own tab; only unassigned items become
+ * `scope: "shared"` (visible in the "Gesamt" tab). No-op once a file is
+ * already in the current shape. */
 function migrateLegacyPacking(raw: unknown): unknown {
   if (typeof raw !== "object" || raw === null || !("packing" in raw)) return raw;
   const record = raw as Record<string, unknown>;
@@ -35,31 +39,45 @@ function migrateLegacyPacking(raw: unknown): unknown {
   const groups = packingRecord.groups;
   if (!Array.isArray(groups)) return raw;
 
-  const isLegacy = groups.some(
+  const hasStringItems = groups.some(
     (group) =>
       typeof group === "object" &&
       group !== null &&
       Array.isArray((group as Record<string, unknown>).items) &&
       (group as Record<string, unknown[]>).items.some((item) => typeof item === "string"),
   );
-  if (!isLegacy) return raw;
+  const hasItemsWithoutScope = groups.some(
+    (group) =>
+      typeof group === "object" &&
+      group !== null &&
+      Array.isArray((group as Record<string, unknown>).items) &&
+      (group as Record<string, unknown[]>).items.some(
+        (item) => typeof item === "object" && item !== null && typeof (item as Record<string, unknown>).scope !== "string",
+      ),
+  );
+  const needsPeopleDefault = !Array.isArray(packingRecord.people) || packingRecord.people.length === 0;
+
+  if (!hasStringItems && !hasItemsWithoutScope && !needsPeopleDefault) return raw;
 
   const defaultPacked = new Set(Array.isArray(packingRecord.defaultPacked) ? (packingRecord.defaultPacked as unknown[]) : []);
 
   return {
     ...record,
     packing: {
-      people: Array.isArray(packingRecord.people) && packingRecord.people.length > 0 ? packingRecord.people : DEFAULT_PACKING_PEOPLE,
+      people: needsPeopleDefault ? DEFAULT_PACKING_PEOPLE : packingRecord.people,
       groups: groups.map((group) => {
         const groupRecord = group as Record<string, unknown>;
         const items = Array.isArray(groupRecord.items) ? groupRecord.items : [];
         return {
           title: groupRecord.title,
-          items: items.map((item) =>
-            typeof item === "string"
-              ? { id: randomUUID(), label: item, assignedTo: null, checked: defaultPacked.has(item) }
-              : item,
-          ),
+          items: items.map((item) => {
+            if (typeof item === "string") {
+              return { id: randomUUID(), label: item, assignedTo: null, scope: "shared", checked: defaultPacked.has(item) };
+            }
+            const itemRecord = item as Record<string, unknown>;
+            if (typeof itemRecord.scope === "string") return itemRecord;
+            return { ...itemRecord, scope: itemRecord.assignedTo ? "personal" : "shared" };
+          }),
         };
       }),
     },
@@ -120,7 +138,12 @@ function assertValidAssignee(trip: Trip, assignedTo: string | null): void {
   }
 }
 
-export async function addPackingItem(groupTitle: string, label: string, assignedTo: string | null): Promise<Trip> {
+export async function addPackingItem(
+  groupTitle: string,
+  label: string,
+  scope: "personal" | "shared",
+  assignedTo: string | null,
+): Promise<Trip> {
   const trimmed = label.trim();
   if (trimmed.length < 1 || trimmed.length > MAX_LABEL_LENGTH) {
     throw new TripValidationError(`Bezeichnung muss 1-${MAX_LABEL_LENGTH} Zeichen lang sein.`);
@@ -137,7 +160,7 @@ export async function addPackingItem(groupTitle: string, label: string, assigned
     throw new PackingNotFoundError(`Gruppe nicht gefunden: ${groupTitle}`);
   }
 
-  group.items.push({ id: randomUUID(), label: trimmed, assignedTo, checked: false });
+  group.items.push({ id: randomUUID(), label: trimmed, assignedTo, scope, checked: false });
   return writeTrip(trip);
 }
 

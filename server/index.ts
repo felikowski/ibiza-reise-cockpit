@@ -58,12 +58,16 @@ async function main() {
 
   app.post("/api/packing/items", packingJson, async (req, res) => {
     try {
-      const { groupTitle, label, assignedTo } = req.body ?? {};
-      if (typeof groupTitle !== "string" || typeof label !== "string") {
-        res.status(400).json({ error: "groupTitle und label sind erforderlich." });
+      const { groupTitle, label, scope, assignedTo } = req.body ?? {};
+      if (
+        typeof groupTitle !== "string" ||
+        typeof label !== "string" ||
+        (scope !== "personal" && scope !== "shared")
+      ) {
+        res.status(400).json({ error: "groupTitle, label und scope (personal|shared) sind erforderlich." });
         return;
       }
-      const trip = await addPackingItem(groupTitle, label, typeof assignedTo === "string" ? assignedTo : null);
+      const trip = await addPackingItem(groupTitle, label, scope, typeof assignedTo === "string" ? assignedTo : null);
       res.json({ ok: true, trip });
     } catch (error) {
       if (error instanceof PackingNotFoundError) {

@@ -90,10 +90,13 @@ const packingPersonSchema = z.object({
   name: z.string().min(1),
 });
 
+const packingScopeSchema = z.enum(["personal", "shared"]);
+
 const packingItemSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1).max(120),
   assignedTo: z.string().min(1).nullable(),
+  scope: packingScopeSchema,
   checked: z.boolean(),
 });
 

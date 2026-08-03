@@ -87,10 +87,13 @@ export interface PackingPerson {
   name: string;
 }
 
+export type PackingScope = "personal" | "shared";
+
 export interface PackingItem {
   id: string;
   label: string;
   assignedTo: string | null;
+  scope: PackingScope;
   checked: boolean;
 }
 
