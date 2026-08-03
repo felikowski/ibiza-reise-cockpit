@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { Map as LeafletMap, LayerGroup } from "leaflet";
 import type { Place } from "@/src/domain/trip";
+import { hasCoords } from "@/src/domain/derive-trip";
 import "leaflet/dist/leaflet.css";
 
 export interface MapHome {
@@ -24,14 +25,6 @@ const TYPE_COLORS: Record<string, string> = {
 };
 const DEFAULT_PIN_COLOR = "#789887";
 
-/** Places without real coordinates yet (older data predating this feature)
- * report lat/lon as undefined. The admin form's number inputs coerce an
- * empty field to 0 rather than leaving it unset, so (0, 0) — Null Island,
- * nowhere near Ibiza — doubles as "not set" here too. */
-export function hasCoords(place: Place): place is Place & { lat: number; lon: number } {
-  return typeof place.lat === "number" && typeof place.lon === "number" && !(place.lat === 0 && place.lon === 0);
-}
-
 export function googleMapsUrl(lat: number, lon: number): string {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
 }
@@ -40,6 +33,9 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] ?? char);
 }
 
+/** Draws the home + place markers and returns their combined bounds. Doesn't
+ * touch the map's viewport itself — callers decide whether/when to fit it,
+ * so switching a filter can swap pins without yanking the camera around. */
 async function renderMarkers(map: LeafletMap, layer: LayerGroup, home: MapHome, places: Place[]) {
   const { default: L } = await import("leaflet");
   layer.clearLayers();
@@ -75,7 +71,7 @@ async function renderMarkers(map: LeafletMap, layer: LayerGroup, home: MapHome, 
     bounds.extend([place.lat, place.lon]);
   }
 
-  map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 });
+  return bounds;
 }
 
 export default function DiscoverMap({ home, places }: { home: MapHome; places: Place[] }) {
@@ -86,7 +82,7 @@ export default function DiscoverMap({ home, places }: { home: MapHome; places: P
   useEffect(() => {
     let cancelled = false;
 
-    import("leaflet").then(({ default: L }) => {
+    import("leaflet").then(async ({ default: L }) => {
       if (cancelled || !containerRef.current) return;
       const map = L.map(containerRef.current, { scrollWheelZoom: false }).setView([home.lat, home.lon], 12);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -96,7 +92,9 @@ export default function DiscoverMap({ home, places }: { home: MapHome; places: P
       const layer = L.layerGroup().addTo(map);
       mapRef.current = map;
       layerRef.current = layer;
-      renderMarkers(map, layer, home, places);
+      const bounds = await renderMarkers(map, layer, home, places);
+      if (cancelled) return;
+      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 });
     });
 
     return () => {

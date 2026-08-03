@@ -11,7 +11,9 @@ import {
   dailyBudget,
   documentsReadiness,
   formatEuro,
+  hasCoords,
   heroDateRangeLabel,
+  nearbyPlaces,
   nightsBetween,
   packingTotals,
   placeTypes,
@@ -22,7 +24,7 @@ import {
 import { addDays, formatISODate, parseISODate } from "@/src/domain/dates";
 import { fetchLocationWeather, type DailyWeather } from "@/src/domain/open-meteo";
 import { describeWeatherCode } from "@/src/domain/weather-codes";
-import DiscoverMap, { googleMapsUrl, hasCoords } from "./discover-map";
+import DiscoverMap, { googleMapsUrl } from "./discover-map";
 
 type TabId =
   | "overview"
@@ -553,9 +555,13 @@ function Bookings({ trip, copied, onCopy }: { trip: Trip; copied: string | null;
   );
 }
 
+const NEARBY_FILTER = "In der Nähe";
+
 function Discover({ trip }: { trip: Trip }) {
   const [filter, setFilter] = useState("Alle");
-  const visible = filter === "Alle" ? trip.places : trip.places.filter((place) => place.type === filter);
+  const filterOptions = ["Alle", NEARBY_FILTER, ...placeTypes(trip).slice(1)];
+  const visible =
+    filter === "Alle" ? trip.places : filter === NEARBY_FILTER ? nearbyPlaces(trip) : trip.places.filter((place) => place.type === filter);
   const home = {
     lat: trip.meta.destinationLat,
     lon: trip.meta.destinationLon,
@@ -565,7 +571,7 @@ function Discover({ trip }: { trip: Trip }) {
   return (
     <section className="page inner-page">
       <PageIntro eyebrow="ENTDECKEN" title="Orte, die nach Inselzeit schmecken." copy="Deine Merkliste für Buchten, Dörfer, gutes Essen und die besten Aussichten." />
-      <div className="filter-row">{placeTypes(trip).map((item) => <button key={item} onClick={() => setFilter(item)} className={filter === item ? "active" : ""}>{item}</button>)}</div>
+      <div className="filter-row">{filterOptions.map((item) => <button key={item} onClick={() => setFilter(item)} className={filter === item ? "active" : ""}>{item}</button>)}</div>
       <div className="places-layout">
         <DiscoverMap home={home} places={visible} />
         <div className="place-grid">

@@ -1,5 +1,5 @@
 import { addDays, enumerateDates, formatISODate, parseISODate } from "./dates";
-import type { Budget, BudgetCategory, DocumentItem, Packing, Trip, TripMeta } from "./trip";
+import type { Budget, BudgetCategory, DocumentItem, Packing, Place, Trip, TripMeta } from "./trip";
 
 export function formatEuro(amount: number): string {
   return `${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 }).format(amount)} €`;
@@ -81,6 +81,36 @@ export function placeTypes(trip: Trip): string[] {
   const seen = new Set<string>();
   for (const place of trip.places) seen.add(place.type);
   return ["Alle", ...seen];
+}
+
+/** Places without real coordinates yet (older data predating the map feature)
+ * report lat/lon as undefined. The admin form's number inputs coerce an
+ * empty field to 0 rather than leaving it unset, so (0, 0) — Null Island,
+ * nowhere near Ibiza — doubles as "not set" here too. */
+export function hasCoords(place: Place): place is Place & { lat: number; lon: number } {
+  return typeof place.lat === "number" && typeof place.lon === "number" && !(place.lat === 0 && place.lon === 0);
+}
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const earthRadiusKm = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
+}
+
+/** Places within a short hop of the finca — walking distance or a couple of
+ * minutes' drive, not "somewhere on the island". */
+const NEARBY_RADIUS_KM = 5;
+
+export function nearbyPlaces(trip: Trip): Place[] {
+  return trip.places.filter(
+    (place) =>
+      hasCoords(place) &&
+      haversineKm(trip.meta.destinationLat, trip.meta.destinationLon, place.lat, place.lon) <= NEARBY_RADIUS_KM,
+  );
 }
 
 export function tripDates(meta: TripMeta): string[] {
