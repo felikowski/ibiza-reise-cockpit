@@ -29,7 +29,6 @@ services:
       - traefik.http.routers.ibiza-cockpit-api.rule=Host(`ibiza.srv1115517.hstgr.cloud`) && (PathPrefix(`/api`) || PathPrefix(`/admin`))
       - traefik.http.routers.ibiza-cockpit-api.entrypoints=websecure
       - traefik.http.routers.ibiza-cockpit-api.tls.certresolver=mytlschallenge
-      - traefik.http.routers.ibiza-cockpit-api.priority=10
       - traefik.http.services.ibiza-cockpit-api.loadbalancer.server.port=4000
 
 networks:
