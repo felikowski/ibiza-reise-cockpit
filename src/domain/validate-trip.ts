@@ -83,14 +83,26 @@ const budgetSchema = z.object({
   paid: z.array(paidItemSchema).min(1),
 });
 
+const packingPersonSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+});
+
+const packingItemSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1).max(120),
+  assignedTo: z.string().min(1).nullable(),
+  checked: z.boolean(),
+});
+
 const packingGroupSchema = z.object({
   title: z.string().min(1),
-  items: z.array(z.string().min(1)).min(1),
+  items: z.array(packingItemSchema),
 });
 
 const packingSchema = z.object({
+  people: z.array(packingPersonSchema).min(1),
   groups: z.array(packingGroupSchema).min(1),
-  defaultPacked: z.array(z.string().min(1)),
 });
 
 const documentItemSchema = z.object({

@@ -80,14 +80,26 @@ export interface Budget {
   paid: PaidItem[];
 }
 
+export interface PackingPerson {
+  id: string;
+  name: string;
+}
+
+export interface PackingItem {
+  id: string;
+  label: string;
+  assignedTo: string | null;
+  checked: boolean;
+}
+
 export interface PackingGroup {
   title: string;
-  items: string[];
+  items: PackingItem[];
 }
 
 export interface Packing {
+  people: PackingPerson[];
   groups: PackingGroup[];
-  defaultPacked: string[];
 }
 
 export interface DocumentItem {

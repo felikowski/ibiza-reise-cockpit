@@ -202,12 +202,50 @@
     ]
   },
   "packing": {
-    "groups": [
-      { "title": "Dokumente & Geld", "items": ["Personalausweis", "Führerschein", "Kreditkarte", "Buchungsbestätigungen"] },
-      { "title": "Kleidung", "items": ["Badesachen", "Leichte Abendkleidung", "Sandalen", "Sneaker", "Sonnenhut"] },
-      { "title": "Technik & Pflege", "items": ["Ladegeräte", "Powerbank", "Sonnencreme SPF 50", "Reiseapotheke"] }
+    "people": [
+      { "id": "felix", "name": "Felix" },
+      { "id": "filter", "name": "Filter" },
+      { "id": "lordBuckethelm", "name": "Lord Buckethelm" }
     ],
-    "defaultPacked": ["Personalausweis", "Kreditkarte", "Badesachen", "Ladegeräte"]
+    "groups": [
+      {
+        "title": "Dokumente & Geld",
+        "items": [
+          { "id": "doc-ausweis", "label": "Personalausweis", "assignedTo": "felix", "checked": true },
+          { "id": "doc-fuehrerschein", "label": "Führerschein", "assignedTo": "felix", "checked": true },
+          { "id": "doc-kreditkarte", "label": "Kreditkarte", "assignedTo": "filter", "checked": true },
+          { "id": "doc-buchungen", "label": "Buchungsbestätigungen", "assignedTo": "filter", "checked": false }
+        ]
+      },
+      {
+        "title": "Kleidung",
+        "items": [
+          { "id": "kleidung-bade", "label": "Badesachen", "assignedTo": "felix", "checked": true },
+          { "id": "kleidung-abend", "label": "Leichte Abendkleidung", "assignedTo": "filter", "checked": false },
+          { "id": "kleidung-sandalen", "label": "Sandalen", "assignedTo": "felix", "checked": false },
+          { "id": "kleidung-sneaker", "label": "Sneaker", "assignedTo": "filter", "checked": false },
+          { "id": "kleidung-hut", "label": "Sonnenhut", "assignedTo": null, "checked": false }
+        ]
+      },
+      {
+        "title": "Technik & Pflege",
+        "items": [
+          { "id": "technik-ladegeraete", "label": "Ladegeräte", "assignedTo": "felix", "checked": true },
+          { "id": "technik-powerbank", "label": "Powerbank", "assignedTo": "filter", "checked": false },
+          { "id": "technik-spf50", "label": "Sonnencreme SPF 50", "assignedTo": null, "checked": false },
+          { "id": "technik-apotheke", "label": "Reiseapotheke", "assignedTo": "filter", "checked": false }
+        ]
+      },
+      {
+        "title": "Für Lord Buckethelm",
+        "items": [
+          { "id": "hund-leine", "label": "Leine & Halsband", "assignedTo": "lordBuckethelm", "checked": false },
+          { "id": "hund-leckerli", "label": "Leckerlis", "assignedTo": "lordBuckethelm", "checked": false },
+          { "id": "hund-napf", "label": "Trinknapf", "assignedTo": "lordBuckethelm", "checked": true },
+          { "id": "hund-decke", "label": "Lieblingsdecke", "assignedTo": "lordBuckethelm", "checked": false }
+        ]
+      }
+    ]
   },
   "documents": [
     { "title": "Personalausweis", "meta": "Gültig bis 03/2031", "status": "Geprüft", "symbol": "ID" },

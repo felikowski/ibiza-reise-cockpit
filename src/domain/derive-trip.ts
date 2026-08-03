@@ -45,9 +45,10 @@ export function dailyBudget(budget: Budget, totalDays: number): number {
   return Math.round(remaining / totalDays);
 }
 
-export function packingTotals(packing: Packing, packed: Set<string>) {
-  const total = packing.groups.reduce((sum, group) => sum + group.items.length, 0);
-  const packedCount = packed.size;
+export function packingTotals(packing: Packing) {
+  const items = packing.groups.flatMap((group) => group.items);
+  const total = items.length;
+  const packedCount = items.filter((item) => item.checked).length;
   const percent = total > 0 ? Math.round((packedCount / total) * 100) : 0;
   return { total, packedCount, percent };
 }
@@ -67,10 +68,10 @@ export function documentsReadiness(documents: DocumentItem[]) {
   return { ready, total: documents.length, pending: documents.length - ready };
 }
 
-export function readinessPercent(trip: Trip, packed: Set<string>): number {
+export function readinessPercent(trip: Trip): number {
   const { confirmed, total: bookingsTotal } = confirmedBookings(trip);
   const { ready, total: docsTotal } = documentsReadiness(trip.documents);
-  const { percent: packingPercent } = packingTotals(trip.packing, packed);
+  const { percent: packingPercent } = packingTotals(trip.packing);
   const bookingsPercent = bookingsTotal > 0 ? (confirmed / bookingsTotal) * 100 : 100;
   const docsPercent = docsTotal > 0 ? (ready / docsTotal) * 100 : 100;
   return Math.round((bookingsPercent + docsPercent + packingPercent) / 3);

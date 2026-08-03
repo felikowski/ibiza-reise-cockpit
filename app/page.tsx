@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Trip } from "@/src/domain/trip";
+import type { PackingItem, Trip } from "@/src/domain/trip";
 import { validateTrip } from "@/src/domain/validate-trip";
 import {
   budgetTotals,
@@ -43,6 +43,31 @@ const tabs: { id: TabId; label: string; symbol: string }[] = [
   { id: "packing", label: "Packen", symbol: "✓" },
   { id: "documents", label: "Dokumente", symbol: "▤" },
 ];
+
+async function submitPackingRequest(url: string, method: string, body?: unknown): Promise<Trip> {
+  const response = await fetch(url, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error ?? `Server antwortete mit ${response.status}`);
+  }
+  return payload.trip as Trip;
+}
+
+function addPackingItem(groupTitle: string, label: string, assignedTo: string | null): Promise<Trip> {
+  return submitPackingRequest("/api/packing/items", "POST", { groupTitle, label, assignedTo });
+}
+
+function patchPackingItem(itemId: string, patch: { checked?: boolean; assignedTo?: string | null }): Promise<Trip> {
+  return submitPackingRequest(`/api/packing/items/${itemId}`, "PATCH", patch);
+}
+
+function removePackingItem(itemId: string): Promise<Trip> {
+  return submitPackingRequest(`/api/packing/items/${itemId}`, "DELETE");
+}
 
 type WeatherState =
   | { status: "loading" }
@@ -107,12 +132,12 @@ export default function Home() {
     );
   }
 
-  return <Dashboard trip={state.trip} />;
+  return <Dashboard initialTrip={state.trip} />;
 }
 
-function Dashboard({ trip }: { trip: Trip }) {
+function Dashboard({ initialTrip }: { initialTrip: Trip }) {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
-  const [packed, setPacked] = useState<Set<string>>(() => new Set(trip.packing.defaultPacked));
+  const [trip, setTrip] = useState<Trip>(initialTrip);
   const [copied, setCopied] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherState>({ status: "loading" });
 
@@ -143,15 +168,6 @@ function Dashboard({ trip }: { trip: Trip }) {
     };
   }, [trip.meta.destinationLat, trip.meta.destinationLon, trip.meta.originLat, trip.meta.originLon, trip.meta.startDate, trip.meta.endDate]);
 
-  const togglePacked = (item: string) => {
-    setPacked((current) => {
-      const next = new Set(current);
-      if (next.has(item)) next.delete(item);
-      else next.add(item);
-      return next;
-    });
-  };
-
   const copyReference = async (reference: string) => {
     await navigator.clipboard?.writeText(reference);
     setCopied(reference);
@@ -163,7 +179,7 @@ function Dashboard({ trip }: { trip: Trip }) {
     [activeTab],
   );
 
-  const packingStats = packingTotals(trip.packing, packed);
+  const packingStats = packingTotals(trip.packing);
 
   return (
     <main className="app-shell">
@@ -199,22 +215,14 @@ function Dashboard({ trip }: { trip: Trip }) {
       <div className="mobile-section-title">{activeLabel}</div>
 
       {activeTab === "overview" && (
-        <Overview trip={trip} packed={packed} weather={weather} onNavigate={setActiveTab} />
+        <Overview trip={trip} weather={weather} onNavigate={setActiveTab} />
       )}
       {activeTab === "plan" && <TravelPlan trip={trip} />}
       {activeTab === "bookings" && <Bookings trip={trip} copied={copied} onCopy={copyReference} />}
       {activeTab === "discover" && <Discover trip={trip} />}
       {activeTab === "weather" && <Weather trip={trip} weather={weather} />}
       {activeTab === "budget" && <Budget trip={trip} />}
-      {activeTab === "packing" && (
-        <Packing
-          trip={trip}
-          packed={packed}
-          percent={packingStats.percent}
-          total={packingStats.total}
-          onToggle={togglePacked}
-        />
-      )}
+      {activeTab === "packing" && <Packing trip={trip} onTripChange={setTrip} />}
       {activeTab === "documents" && <Documents trip={trip} />}
     </main>
   );
@@ -222,12 +230,10 @@ function Dashboard({ trip }: { trip: Trip }) {
 
 function Overview({
   trip,
-  packed,
   weather,
   onNavigate,
 }: {
   trip: Trip;
-  packed: Set<string>;
   weather: WeatherState;
   onNavigate: (tab: TabId) => void;
 }) {
@@ -236,8 +242,8 @@ function Overview({
   const totals = budgetTotals(trip.budget);
   const bookings = confirmedBookings(trip);
   const docs = documentsReadiness(trip.documents);
-  const packingStats = packingTotals(trip.packing, packed);
-  const readiness = readinessPercent(trip, packed);
+  const packingStats = packingTotals(trip.packing);
+  const readiness = readinessPercent(trip);
   const outbound = trip.flights.outbound;
 
   return (
@@ -597,18 +603,212 @@ function Budget({ trip }: { trip: Trip }) {
   );
 }
 
-function Packing({ trip, packed, percent, total, onToggle }: { trip: Trip; packed: Set<string>; percent: number; total: number; onToggle: (item: string) => void }) {
+function Packing({ trip, onTripChange }: { trip: Trip; onTripChange: (trip: Trip) => void }) {
+  const [personTab, setPersonTab] = useState<string>(trip.packing.people[0]?.id ?? "all");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const packingStats = packingTotals(trip.packing);
+  const groupTitles = trip.packing.groups.map((group) => group.title);
+
+  const run = async (action: () => Promise<Trip>) => {
+    setPending(true);
+    setError(null);
+    try {
+      onTripChange(await action());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const toggleChecked = (item: PackingItem) => run(() => patchPackingItem(item.id, { checked: !item.checked }));
+  const removeItem = (item: PackingItem) => run(() => removePackingItem(item.id));
+  const assignItem = (item: PackingItem, personId: string | null) => run(() => patchPackingItem(item.id, { assignedTo: personId }));
+  const addItem = (groupTitle: string, label: string, assignedTo: string | null) => run(() => addPackingItem(groupTitle, label, assignedTo));
+
+  const tabs = [...trip.packing.people.map((person) => ({ id: person.id, label: person.name })), { id: "all", label: "Alle" }];
+
   return (
     <section className="page inner-page">
       <PageIntro eyebrow="PACKLISTE" title="Leicht packen. Nichts vergessen." copy="Die wichtigsten Dinge für Sonne, Strand und entspannte Abende." />
-      <div className="packing-head card"><div className="packing-ring" style={{ "--progress": `${percent * 3.6}deg` } as React.CSSProperties}><span>{percent}<small>%</small></span></div><div><span>Dein Fortschritt</span><h2>{packed.size} von {total} eingepackt</h2><p>{total - packed.size === 0 ? "Fertig — der Urlaub kann kommen." : `Noch ${total - packed.size} Dinge, dann bist du startklar.`}</p></div></div>
-      <div className="packing-grid">
-        {trip.packing.groups.map((group) => (
-          <section className="card packing-group" key={group.title}><h2>{group.title}</h2><div>{group.items.map((item) => <label key={item} className={packed.has(item) ? "packed" : ""}><input type="checkbox" checked={packed.has(item)} onChange={() => onToggle(item)} /><i>{packed.has(item) ? "✓" : ""}</i><span>{item}</span></label>)}</div></section>
+      <div className="packing-head card"><div className="packing-ring" style={{ "--progress": `${packingStats.percent * 3.6}deg` } as React.CSSProperties}><span>{packingStats.percent}<small>%</small></span></div><div><span>Dein Fortschritt</span><h2>{packingStats.packedCount} von {packingStats.total} eingepackt</h2><p>{packingStats.total - packingStats.packedCount === 0 ? "Fertig — der Urlaub kann kommen." : `Noch ${packingStats.total - packingStats.packedCount} Dinge, dann bist du startklar.`}</p></div></div>
+
+      <div className="packing-people" role="tablist" aria-label="Gepackt von">
+        {tabs.map((tab) => (
+          <button key={tab.id} className={personTab === tab.id ? "selected" : ""} onClick={() => setPersonTab(tab.id)} role="tab" aria-selected={personTab === tab.id}>
+            {tab.label}
+          </button>
         ))}
       </div>
+
+      {error && <p className="packing-error">{error}</p>}
+
+      {personTab === "all" ? (
+        <PackingAllView trip={trip} groupTitles={groupTitles} pending={pending} onToggle={toggleChecked} onRemove={removeItem} onAssign={assignItem} onAdd={addItem} />
+      ) : (
+        <PackingPersonView trip={trip} personId={personTab} groupTitles={groupTitles} pending={pending} onToggle={toggleChecked} onRemove={removeItem} onAdd={(groupTitle, label) => addItem(groupTitle, label, personTab)} />
+      )}
     </section>
   );
+}
+
+function PackingPersonView({
+  trip,
+  personId,
+  groupTitles,
+  pending,
+  onToggle,
+  onRemove,
+  onAdd,
+}: {
+  trip: Trip;
+  personId: string;
+  groupTitles: string[];
+  pending: boolean;
+  onToggle: (item: PackingItem) => void;
+  onRemove: (item: PackingItem) => void;
+  onAdd: (groupTitle: string, label: string, assignedTo: string | null) => void;
+}) {
+  const groupsWithItems = trip.packing.groups
+    .map((group) => ({ title: group.title, items: group.items.filter((item) => item.assignedTo === personId) }))
+    .filter((group) => group.items.length > 0);
+
+  return (
+    <>
+      {groupsWithItems.length === 0 ? (
+        <p className="packing-empty card">Noch nichts zugewiesen. Füge unten den ersten Punkt hinzu.</p>
+      ) : (
+        <div className="packing-grid">
+          {groupsWithItems.map((group) => (
+            <section className="card packing-group" key={group.title}>
+              <h2>{group.title}</h2>
+              <div>
+                {group.items.map((item) => (
+                  <label key={item.id} className={item.checked ? "packed" : ""}>
+                    <input type="checkbox" checked={item.checked} onChange={() => onToggle(item)} disabled={pending} />
+                    <i>{item.checked ? "✓" : ""}</i>
+                    <span>{item.label}</span>
+                    <button type="button" className="packing-remove" aria-label={`${item.label} entfernen`} onClick={() => onRemove(item)} disabled={pending}>×</button>
+                  </label>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+      <PackingAddForm groupTitles={groupTitles} people={trip.packing.people} showAssignee={false} pending={pending} onAdd={onAdd} />
+    </>
+  );
+}
+
+function PackingAllView({
+  trip,
+  groupTitles,
+  pending,
+  onToggle,
+  onRemove,
+  onAssign,
+  onAdd,
+}: {
+  trip: Trip;
+  groupTitles: string[];
+  pending: boolean;
+  onToggle: (item: PackingItem) => void;
+  onRemove: (item: PackingItem) => void;
+  onAssign: (item: PackingItem, personId: string | null) => void;
+  onAdd: (groupTitle: string, label: string, assignedTo: string | null) => void;
+}) {
+  const groupsWithItems = trip.packing.groups.filter((group) => group.items.length > 0);
+
+  return (
+    <>
+      {groupsWithItems.length === 0 ? (
+        <p className="packing-empty card">Noch keine Punkte auf der Liste.</p>
+      ) : (
+        <div className="packing-grid">
+          {groupsWithItems.map((group) => (
+            <section className="card packing-group packing-group-all" key={group.title}>
+              <h2>{group.title}</h2>
+              <div>
+                {group.items.map((item) => (
+                  <div key={item.id} className={item.checked ? "packing-all-row packed" : "packing-all-row"}>
+                    <label>
+                      <input type="checkbox" checked={item.checked} onChange={() => onToggle(item)} disabled={pending} />
+                      <i>{item.checked ? "✓" : ""}</i>
+                      <span>{item.label}</span>
+                    </label>
+                    <div className="assignee-chips">
+                      {trip.packing.people.map((person) => (
+                        <button
+                          key={person.id}
+                          type="button"
+                          className={item.assignedTo === person.id ? "assignee-chip active" : "assignee-chip"}
+                          title={person.name}
+                          disabled={pending}
+                          onClick={() => onAssign(item, item.assignedTo === person.id ? null : person.id)}
+                        >
+                          {initials(person.name)}
+                        </button>
+                      ))}
+                    </div>
+                    <button type="button" className="packing-remove" aria-label={`${item.label} entfernen`} onClick={() => onRemove(item)} disabled={pending}>×</button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+      <PackingAddForm groupTitles={groupTitles} people={trip.packing.people} showAssignee pending={pending} onAdd={onAdd} />
+    </>
+  );
+}
+
+function PackingAddForm({
+  groupTitles,
+  people,
+  showAssignee,
+  pending,
+  onAdd,
+}: {
+  groupTitles: string[];
+  people: Trip["packing"]["people"];
+  showAssignee: boolean;
+  pending: boolean;
+  onAdd: (groupTitle: string, label: string, assignedTo: string | null) => void;
+}) {
+  const [label, setLabel] = useState("");
+  const [group, setGroup] = useState(groupTitles[0] ?? "");
+  const [assignee, setAssignee] = useState("");
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const trimmed = label.trim();
+    if (!trimmed || !group) return;
+    onAdd(group, trimmed, showAssignee ? assignee || null : null);
+    setLabel("");
+  };
+
+  return (
+    <form className="packing-add card" onSubmit={submit}>
+      <input type="text" placeholder="Neuer Punkt …" value={label} onChange={(event) => setLabel(event.target.value)} maxLength={120} disabled={pending} />
+      <select value={group} onChange={(event) => setGroup(event.target.value)} disabled={pending}>
+        {groupTitles.map((title) => <option key={title} value={title}>{title}</option>)}
+      </select>
+      {showAssignee && (
+        <select value={assignee} onChange={(event) => setAssignee(event.target.value)} disabled={pending}>
+          <option value="">Niemand</option>
+          {people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
+        </select>
+      )}
+      <button type="submit" disabled={pending || !label.trim()}>+ Hinzufügen</button>
+    </form>
+  );
+}
+
+function initials(name: string): string {
+  return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 }
 
 function Documents({ trip }: { trip: Trip }) {
