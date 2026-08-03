@@ -9,15 +9,20 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",
+    "server": "tsx server/index.ts",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
   },
   "dependencies": {
+    "express": "^5.2.1",
     "next": "16.2.6",
     "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "react-dom": "19.2.6",
+    "tsx": "^4.23.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.2.1",
+    "@types/express": "^5.0.6",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",

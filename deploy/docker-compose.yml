@@ -13,6 +13,28 @@ services:
       - traefik.http.routers.ibiza-cockpit.tls.certresolver=mytlschallenge
       - traefik.http.services.ibiza-cockpit.loadbalancer.server.port=80
 
+  ibiza-cockpit-api:
+    image: ghcr.io/felikowski/ibiza-reise-cockpit-api:main
+    container_name: ibiza-cockpit-api
+    restart: unless-stopped
+    env_file:
+      - /etc/ibiza-cockpit/admin.env
+    volumes:
+      - ibiza_trip_data:/data
+    networks:
+      - root_default
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=root_default
+      - traefik.http.routers.ibiza-cockpit-api.rule=Host(`ibiza.srv1115517.hstgr.cloud`) && (PathPrefix(`/api`) || PathPrefix(`/admin`))
+      - traefik.http.routers.ibiza-cockpit-api.entrypoints=websecure
+      - traefik.http.routers.ibiza-cockpit-api.tls.certresolver=mytlschallenge
+      - traefik.http.routers.ibiza-cockpit-api.priority=10
+      - traefik.http.services.ibiza-cockpit-api.loadbalancer.server.port=4000
+
 networks:
   root_default:
     external: true
+
+volumes:
+  ibiza_trip_data:

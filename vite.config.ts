@@ -5,8 +5,12 @@ import { defineConfig } from "vite";
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
 export default defineConfig({
-  server: isCodexSeatbeltSandbox
-    ? { watch: { useFsEvents: false, usePolling: true } }
-    : undefined,
+  server: {
+    ...(isCodexSeatbeltSandbox ? { watch: { useFsEvents: false, usePolling: true } } : {}),
+    proxy: {
+      "/api": "http://localhost:4000",
+      "/admin": "http://localhost:4000",
+    },
+  },
   plugins: [vinext()],
 });

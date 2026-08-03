@@ -18,94 +18,88 @@ Implemented sections:
 - Packen: interactive checklist
 - Dokumente & Infos: document status, practical facts and emergency contacts
 
+All of the above is now backed by a typed, validated, editable JSON model —
+see sections 2 and 3.
+
 ## 2. Technical snapshot
 
-- `app/page.tsx` is a client component containing the UI, interactions and all
-  example data.
+- `app/page.tsx` is a client component containing the UI and interactions. It
+  fetches trip data from `GET /api/trip` on mount, validates it again on the
+  client (`src/domain/validate-trip.ts`), and shows a loading/error state
+  around the dashboard rather than assuming the data is always present.
 - `app/globals.css` contains the complete visual system and responsive rules.
-- The app builds as a plain static export (`output: "export"`, `vinext build`)
-  to `dist/client/` — no Cloudflare Workers, no OpenAI Sites, no server
-  runtime.
-- There is no persistent storage. The pack list uses React state only.
-- Production: `Dockerfile` builds the static export and serves it with nginx
-  (config in `deploy/nginx.conf`). `deploy/docker-compose.yml` runs it on the
-  VPS behind the existing Traefik reverse proxy (`root_default` network,
-  `mytlschallenge` certresolver), reachable at
-  `https://ibiza.srv1115517.hstgr.cloud`.
+- `src/domain/trip.ts` / `validate-trip.ts` / `derive-trip.ts` are the single
+  source of truth for the data shape and every computed value (countdown,
+  trip duration, budget totals/percentages, readiness score, packing
+  progress). Nothing is stored as a duplicate hardcoded constant anymore.
+- The frontend still builds as a plain static export (`output: "export"`,
+  `vinext build` → `dist/client/`), served by nginx (`Dockerfile`,
+  `deploy/nginx.conf`). It has no server-side rendering and no direct
+  filesystem access — it only talks to the api service over HTTP.
+- A small Express server (`server/index.ts`, own `server/Dockerfile`, run via
+  `tsx`, no compile step) owns the actual data:
+  - `GET /api/trip` — public, returns the current validated trip JSON.
+  - `GET /admin` — HTTP Basic Auth protected, serves a minimal JSON-textarea
+    editor (`server/admin-page.ts`).
+  - `POST /admin/api/trip` — HTTP Basic Auth protected, validates the body
+    against the Zod schema, writes atomically (`.tmp` + rename) and copies
+    the previous version to a timestamped backup first (keeps the newest 20,
+    prunes older ones). Rejects with `400` and the Zod error message on
+    invalid input.
+  - Basic Auth credentials come from `ADMIN_USERNAME`/`ADMIN_PASSWORD` env
+    vars. If either is unset, admin routes fail closed with `503` rather than
+    silently allowing access.
+  - Data lives at `DATA_DIR` (default `/data`) on a Docker volume
+    (`ibiza_trip_data` in `deploy/docker-compose.yml`), seeded from
+    `data/trip.example.json` the first time the container starts with no
+    `trip.json` present yet.
+- Production: two containers behind the existing Traefik reverse proxy on the
+  VPS, same Host (`ibiza.srv1115517.hstgr.cloud`), split by path — Traefik
+  routes `/api*` and `/admin*` to the api service (higher router priority)
+  and everything else to the frontend/nginx service.
 - CI/CD: `.github/workflows/deploy.yml` runs on every push to `main` — builds
-  and pushes the image to GHCR (`ghcr.io/felikowski/ibiza-reise-cockpit`),
-  then SSHes into the VPS to `docker compose pull && up -d`. Requires the
-  `production` GitHub Environment secrets `VPS_SSH_HOST`, `VPS_SSH_USER`,
-  `VPS_SSH_PRIVATE_KEY`.
+  and pushes both images to GHCR (`ghcr.io/felikowski/ibiza-reise-cockpit`
+  and `…-api`), then SSHes into the VPS to `docker compose pull && up -d`.
+  Requires the `production` GitHub Environment secrets `VPS_SSH_HOST`,
+  `VPS_SSH_USER`, `VPS_SSH_PRIVATE_KEY`, plus a non-versioned secret-zero
+  file `/etc/ibiza-cockpit/admin.env` on the VPS (`ADMIN_USERNAME`,
+  `ADMIN_PASSWORD`) that the deploy workflow does not manage.
 
-## 3. Remaining migration: JSON data layer
+## 3. Persistence decision (resolved)
 
-Create one canonical model, for example:
+- Reading is fully public and unauthenticated (`GET /api/trip`) — the
+  content itself isn't secret, only the ability to change it is.
+- Editing goes through a small authenticated API with server-side Zod
+  validation, atomic file replacement and automatic backups — exactly the
+  bar `AGENTS.md` set before write-back was allowed.
+- No database was introduced. A single JSON file on a volume is still enough
+  for one trip. Revisit SQLite/Postgres only if multiple trips, multiple
+  independent users, or concurrent-edit conflict handling become real
+  requirements.
+- Packing-checklist ticks are intentionally still client-only state — they
+  reset on reload. Only the trip *content* (flights, budget, itinerary, etc.)
+  is meant to be edited and persisted through `/admin`.
 
-```text
-data/trip.example.json
-src/domain/trip.ts
-src/domain/validate-trip.ts
-```
+## 4. Security notes
 
-The model should cover:
+- The GitHub repository and both GHCR packages should stay set to the access
+  level the user wants once the data stops being fictional — packages were
+  made public early on for simplicity while only demo data existed; revisit
+  before real personal data goes into `trip.json`.
+- HTTP Basic Auth over HTTPS (via Traefik/`mytlschallenge`) is the current
+  access control for `/admin`. It's adequate for a single-user hobby project;
+  if this ever needs multiple admin users or audit logging, that's the point
+  to move to something like Authentik/Authelia in front of Traefik instead of
+  extending the Express app's own auth.
+- Real document/ID numbers still shouldn't go into `trip.json` unless
+  strictly necessary, per `AGENTS.md`.
 
-- trip metadata, dates and travelers
-- outbound and return journeys
-- accommodation and transport bookings
-- itinerary days and timeline entries
-- saved places and categories
-- budget categories, payments and currency
-- packing groups and items
-- documents, emergency contacts and practical facts
+## 5. Ideas for later (not started, not assumed)
 
-All computed UI values must be derived from this model. Do not put secrets or
-real document identifiers in the example JSON.
-
-Since the app is a static export, the simplest loading mode is bundling the
-JSON at build time (import it directly, validate once during the build/render
-path). Runtime-mounted JSON is possible later (fetch it client-side from a
-file the nginx container also serves from a mounted volume) if the data needs
-to change without rebuilding the image — revisit only if that becomes a real
-requirement.
-
-## 4. Persistence decision
-
-Do not confuse dynamic loading with server-side editing:
-
-- Reading a bundled or mounted JSON file requires no application backend.
-- Editing and saving JSON from the browser requires a small authenticated API,
-  validation, atomic file replacement and backups — that would also mean
-  moving off `output: "export"` to a Node runtime.
-- Multiple trips, users or concurrent edits should move to SQLite or Postgres.
-- Per-device UI preferences and packing progress can initially use localStorage.
-
-## 5. Security before real data
-
-Before replacing example content with actual travel data:
-
-- protect the site with Caddy/Traefik basic auth, Authentik, Authelia or an
-  equivalent access layer (not yet set up)
-- keep the GitHub repository private
-- keep any real `trip.json` outside the container image and repository if it
-  ever contains sensitive data
-- avoid storing passport/ID numbers unless strictly necessary
-- back up any writable state and test restoration
-
-## 6. Acceptance criteria for the JSON data model milestone
-
-- all seven tabs match the current demo on desktop and mobile
-- dashboard content is loaded from valid JSON
-- invalid or absent JSON produces a helpful visible error
-- no personal or secret data exists in Git history or the image
-- `npm run build` and the Docker image build succeed after the change
-- the production deployment still matches the pre-change UI after the next
-  push to `main`
-
-## 7. Suggested prompt for the next Codex task
-
-> Read `AGENTS.md` and `HANDOVER.md` completely. Extract every hardcoded trip
-> value from the current dashboard into a typed, validated example JSON model
-> while preserving the exact interface and interactions. Derive countdowns,
-> durations, totals and percentages from the model. Add a helpful
-> invalid-data state and run `npm run build`.
+- Replace the raw JSON textarea in `/admin` with real per-section forms
+  (flights, itinerary days, budget categories, etc.) if editing JSON by hand
+  turns out to be too error-prone in practice.
+- Multi-trip support (would need a real identifier per trip and likely a
+  small database) — only if a second trip is actually planned.
+- Surface the automatic backups in the admin UI (list + restore) instead of
+  leaving them as an SSH-only safety net.

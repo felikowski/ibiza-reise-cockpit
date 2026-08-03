@@ -1,0 +1,241 @@
+{
+  "meta": {
+    "title": "Ibiza",
+    "titleAccent": "is calling.",
+    "routeFrom": "BER",
+    "routeTo": "IBZ",
+    "travelersCount": 2,
+    "accommodationLabel": "Finca & Mietwagen",
+    "startDate": "2026-09-12",
+    "endDate": "2026-09-19"
+  },
+  "flights": {
+    "outbound": {
+      "dateLabel": "12. Sep",
+      "departureTime": "08:25",
+      "departureAirport": "BER",
+      "departureCity": "Berlin",
+      "arrivalTime": "11:10",
+      "arrivalAirport": "IBZ",
+      "arrivalCity": "Ibiza",
+      "carrier": "Eurowings",
+      "flightNumber": "EW 8540",
+      "durationLabel": "2 h 45 min",
+      "terminal": "Terminal 1",
+      "status": "confirmed",
+      "referenceCode": "IBZ7X2"
+    },
+    "return": {
+      "dateLabel": "Sa, 19. Sep",
+      "departureTime": "12:05",
+      "departureAirport": "IBZ",
+      "departureCity": "Ibiza",
+      "arrivalTime": "14:50",
+      "arrivalAirport": "BER",
+      "arrivalCity": "Berlin",
+      "carrier": "Eurowings",
+      "flightNumber": "EW 8541",
+      "durationLabel": "2 h 45 min",
+      "terminal": "",
+      "status": "confirmed",
+      "referenceCode": "IBZ7X2"
+    }
+  },
+  "accommodation": {
+    "name": "Finca Sa Font",
+    "area": "Santa Gertrudis",
+    "dateRangeLabel": "12.–19. Sep · 7 Nächte",
+    "notes": "Frühstück inkl.",
+    "referenceCode": "FS-21984",
+    "status": "confirmed"
+  },
+  "rentalCar": {
+    "category": "Kompakt SUV",
+    "provider": "Centauro",
+    "notes": "Vollkasko",
+    "pickupLabel": "12. Sep, 11:45",
+    "dropoffLabel": "19. Sep, 09:30",
+    "referenceCode": "CTR-8841",
+    "status": "confirmed"
+  },
+  "weather": {
+    "currentTemp": "28°",
+    "feelsLike": "29°",
+    "forecast": [
+      { "day": "Sa", "temp": "28°", "cloudy": false },
+      { "day": "So", "temp": "29°", "cloudy": false },
+      { "day": "Mo", "temp": "27°", "cloudy": true },
+      { "day": "Di", "temp": "28°", "cloudy": false }
+    ]
+  },
+  "itineraryDays": [
+    {
+      "weekday": "Sa",
+      "dateLabel": "12. Sep",
+      "title": "Ankommen & einchecken",
+      "note": "Flug, Mietwagen, Finca",
+      "tone": "sun",
+      "timeline": [
+        { "time": "05:55", "title": "Am Flughafen", "note": "BER · Terminal 1", "highlight": false },
+        { "time": "08:25", "title": "Abflug nach Ibiza", "note": "Eurowings EW 8540", "highlight": true },
+        { "time": "11:45", "title": "Mietwagen übernehmen", "note": "Centauro · Shuttle-Zone", "highlight": false },
+        { "time": "14:00", "title": "Check-in in der Finca", "note": "Santa Gertrudis", "highlight": false },
+        { "time": "19:30", "title": "Willkommensdinner", "note": "Tisch noch reservieren", "highlight": false }
+      ]
+    },
+    {
+      "weekday": "So",
+      "dateLabel": "13. Sep",
+      "title": "Nordküste",
+      "note": "Cala Xarraca · Sunset",
+      "tone": "water",
+      "timeline": [
+        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "time": "11:00", "title": "Nordküste", "note": "Cala Xarraca · Sunset", "highlight": true },
+        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+      ]
+    },
+    {
+      "weekday": "Mo",
+      "dateLabel": "14. Sep",
+      "title": "Altstadt & Tapas",
+      "note": "Dalt Vila · La Marina",
+      "tone": "peach",
+      "timeline": [
+        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "time": "11:00", "title": "Altstadt & Tapas", "note": "Dalt Vila · La Marina", "highlight": true },
+        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+      ]
+    },
+    {
+      "weekday": "Di",
+      "dateLabel": "15. Sep",
+      "title": "Formentera",
+      "note": "Fähre · Roller · Strand",
+      "tone": "water",
+      "timeline": [
+        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "time": "11:00", "title": "Formentera", "note": "Fähre · Roller · Strand", "highlight": true },
+        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+      ]
+    },
+    {
+      "weekday": "Mi",
+      "dateLabel": "16. Sep",
+      "title": "Freier Tag",
+      "note": "Pool · Markt · spontan",
+      "tone": "sage",
+      "timeline": [
+        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "time": "11:00", "title": "Freier Tag", "note": "Pool · Markt · spontan", "highlight": true },
+        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+      ]
+    },
+    {
+      "weekday": "Do",
+      "dateLabel": "17. Sep",
+      "title": "Beach Club",
+      "note": "Lunch · Cala Jondal",
+      "tone": "peach",
+      "timeline": [
+        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "time": "11:00", "title": "Beach Club", "note": "Lunch · Cala Jondal", "highlight": true },
+        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+      ]
+    },
+    {
+      "weekday": "Fr",
+      "dateLabel": "18. Sep",
+      "title": "Es Vedrà",
+      "note": "Aussicht · Abschiedsessen",
+      "tone": "sun",
+      "timeline": [
+        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "time": "11:00", "title": "Es Vedrà", "note": "Aussicht · Abschiedsessen", "highlight": true },
+        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+      ]
+    },
+    {
+      "weekday": "Sa",
+      "dateLabel": "19. Sep",
+      "title": "Heimreise",
+      "note": "Check-out · Rückflug",
+      "tone": "stone",
+      "timeline": [
+        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "time": "11:00", "title": "Heimreise", "note": "Check-out · Rückflug", "highlight": true },
+        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+      ]
+    }
+  ],
+  "places": [
+    { "name": "Es Vedrà", "type": "Aussicht", "area": "Südwesten", "note": "Zum Sonnenuntergang", "color": "lavender" },
+    { "name": "Cala Xarraca", "type": "Strand", "area": "Norden", "note": "Klares Wasser · früh hin", "color": "aqua" },
+    { "name": "Dalt Vila", "type": "Kultur", "area": "Ibiza-Stadt", "note": "Abends durch die Gassen", "color": "sand" },
+    { "name": "Mercat de Forada", "type": "Essen", "area": "Buscastell", "note": "Samstags · lokal", "color": "peach" },
+    { "name": "Ses Illetes", "type": "Strand", "area": "Formentera", "note": "Fähre vorab buchen", "color": "sky" },
+    { "name": "Santa Gertrudis", "type": "Essen", "area": "Inselmitte", "note": "Cafés & kleine Läden", "color": "sage" }
+  ],
+  "budget": {
+    "totalBudget": 3000,
+    "categories": [
+      { "name": "Unterkunft", "amount": 980, "budgeted": 1195, "color": "coral" },
+      { "name": "Flüge", "amount": 486, "budgeted": 486, "color": "blue" },
+      { "name": "Mietwagen", "amount": 318, "budgeted": 398, "color": "sun" },
+      { "name": "Essen & Trinken", "amount": 240, "budgeted": 750, "color": "sage" },
+      { "name": "Erlebnisse", "amount": 160, "budgeted": 400, "color": "lavender" }
+    ],
+    "paid": [
+      { "label": "Flüge", "amount": 486, "status": "paid" },
+      { "label": "Finca · Anzahlung", "amount": 490, "status": "paid" },
+      { "label": "Mietwagen · Reservierung", "amount": 0, "status": "on_site" }
+    ]
+  },
+  "packing": {
+    "groups": [
+      { "title": "Dokumente & Geld", "items": ["Personalausweis", "Führerschein", "Kreditkarte", "Buchungsbestätigungen"] },
+      { "title": "Kleidung", "items": ["Badesachen", "Leichte Abendkleidung", "Sandalen", "Sneaker", "Sonnenhut"] },
+      { "title": "Technik & Pflege", "items": ["Ladegeräte", "Powerbank", "Sonnencreme SPF 50", "Reiseapotheke"] }
+    ],
+    "defaultPacked": ["Personalausweis", "Kreditkarte", "Badesachen", "Ladegeräte"]
+  },
+  "documents": [
+    { "title": "Personalausweis", "meta": "Gültig bis 03/2031", "status": "Geprüft", "symbol": "ID" },
+    { "title": "Führerschein", "meta": "Für Mietwagen benötigt", "status": "Geprüft", "symbol": "DL" },
+    { "title": "Reiseversicherung", "meta": "Police EU-204984", "status": "Gespeichert", "symbol": "+" },
+    { "title": "Bordkarten", "meta": "Verfügbar ab 11. Sep", "status": "Ausstehend", "symbol": "✦" }
+  ],
+  "emergencyContacts": [
+    { "label": "EU-Notruf", "phone": "112" },
+    { "label": "Deutsche Botschaft Madrid", "phone": "+34 91 557 90 00" },
+    { "label": "Unterkunft", "phone": "+34 971 000 000" }
+  ],
+  "practicalFacts": [
+    { "label": "Zeitzone", "value": "Wie Berlin" },
+    { "label": "Währung", "value": "Euro (€)" },
+    { "label": "Steckdose", "value": "Typ C / F" },
+    { "label": "Sprache", "value": "Spanisch / Katalanisch" }
+  ],
+  "insiderTip": {
+    "quote": "Fahr zum Sonnenuntergang an den Aussichtspunkt bei Es Vedrà — und sei eine Stunde früher da."
+  },
+  "checkInReminder": {
+    "title": "24 Stunden vorher",
+    "note": "Online-Check-in öffnen, Bordkarten speichern und Abholzeit für den Mietwagen bestätigen.",
+    "dateLabel": "11. Sep"
+  }
+}

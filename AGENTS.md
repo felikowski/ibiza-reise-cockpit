@@ -11,32 +11,38 @@ only. Communicate with the user in German unless asked otherwise.
 - Next.js 16 and React 19, built through vinext/Vite as a static export
   (`output: "export"` in `next.config.ts`) — no Cloudflare Workers, no OpenAI
   Sites, no `wrangler`
-- one client-side route in `app/page.tsx`
+- one client-side route in `app/page.tsx`, which fetches trip data from
+  `GET /api/trip` at runtime and renders a clear loading/error state around it
 - custom responsive styling in `app/globals.css`
-- no database, API, durable storage, or external data source
-- sample trip data is hardcoded in arrays and objects in `app/page.tsx`
-- packing state resets on reload
-- `npm run build` produces a fully static bundle at `dist/client/`, served by
-  nginx in the production Docker image (see `Dockerfile`)
-- deployed to a self-managed VPS behind Traefik at
-  `https://ibiza.srv1115517.hstgr.cloud`, auto-deployed via GitHub Actions
-  (`.github/workflows/deploy.yml`) on every push to `main`: build image →
-  push to GHCR → SSH deploy (`docker compose pull && up -d`)
+- trip data model: `src/domain/trip.ts` (types), `src/domain/validate-trip.ts`
+  (Zod schema, shared by the client and the server), `src/domain/derive-trip.ts`
+  (countdown, budget totals/percentages, readiness — always derived, never
+  duplicated as separate stored constants)
+- `data/trip.example.json` — the seed data, copied onto the server's volume
+  the first time it starts with no `trip.json` yet
+- small Express server in `server/` (own `server/Dockerfile`, runs via `tsx`,
+  no build step): `GET /api/trip` (public read), `GET /admin` +
+  `POST /admin/api/trip` (HTTP Basic Auth via `ADMIN_USERNAME`/
+  `ADMIN_PASSWORD` env vars — fails closed with 503 if unset), atomic writes
+  with timestamped backups under `/data/backups/`
+- packing checklist state itself still lives in browser state only (resets on
+  reload); only the trip *content* is persisted
+- two production Docker images: the frontend (nginx serving the static
+  export, `Dockerfile`) and the api/admin service (`server/Dockerfile`),
+  both deployed to a self-managed VPS behind Traefik at
+  `https://ibiza.srv1115517.hstgr.cloud` — Traefik path-routes `/api` and
+  `/admin` to the api service, everything else to the frontend
+  (`deploy/docker-compose.yml`)
+- auto-deployed via GitHub Actions (`.github/workflows/deploy.yml`) on every
+  push to `main`: build both images → push to GHCR → SSH deploy
+  (`docker compose pull && up -d`)
 
 ## Primary next objective
 
-Extract the hardcoded trip content into a typed and validated JSON data
-model, without changing the visual product:
-
-1. Extract all trip content into a typed and validated JSON data model
-   (`data/trip.example.json` + validation, see `HANDOVER.md`).
-2. Preserve every current tab and interaction while reading from that model.
-3. Since the app is a static export, prefer bundling the JSON at build time
-   for the first version; only add a small server/API if write-back is
-   later explicitly requested (that would also require moving off
-   `output: "export"`).
-
-The detailed handover and acceptance criteria are in `HANDOVER.md`.
+No open migration phase right now — the JSON data model and the editable
+admin dashboard are both live. Future work here should be scoped by the user
+(e.g. richer per-field admin forms instead of the raw JSON editor, or
+multi-trip support) rather than assumed.
 
 ## Safety and data rules
 
