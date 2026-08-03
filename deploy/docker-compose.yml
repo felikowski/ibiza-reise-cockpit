@@ -1,0 +1,18 @@
+services:
+  ibiza-cockpit:
+    image: ghcr.io/felikowski/ibiza-reise-cockpit:main
+    container_name: ibiza-cockpit
+    restart: unless-stopped
+    networks:
+      - root_default
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=root_default
+      - traefik.http.routers.ibiza-cockpit.rule=Host(`ibiza.srv1115517.hstgr.cloud`)
+      - traefik.http.routers.ibiza-cockpit.entrypoints=websecure
+      - traefik.http.routers.ibiza-cockpit.tls.certresolver=mytlschallenge
+      - traefik.http.services.ibiza-cockpit.loadbalancer.server.port=80
+
+networks:
+  root_default:
+    external: true

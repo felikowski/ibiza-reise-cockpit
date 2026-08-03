@@ -1,0 +1,11 @@
+node_modules
+dist
+.next
+.vinext
+.wrangler
+outputs
+work
+.git
+.github
+*.md
+.env*

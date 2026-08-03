@@ -8,27 +8,33 @@ only. Communicate with the user in German unless asked otherwise.
 
 ## Current architecture
 
-- Next.js 16 and React 19, built through vinext/Vite for OpenAI Sites
+- Next.js 16 and React 19, built through vinext/Vite as a static export
+  (`output: "export"` in `next.config.ts`) — no Cloudflare Workers, no OpenAI
+  Sites, no `wrangler`
 - one client-side route in `app/page.tsx`
 - custom responsive styling in `app/globals.css`
 - no database, API, durable storage, or external data source
 - sample trip data is hardcoded in arrays and objects in `app/page.tsx`
 - packing state resets on reload
-- the existing Sites deployment is public and must remain functional until a
-  VPS replacement has been verified
+- `npm run build` produces a fully static bundle at `dist/client/`, served by
+  nginx in the production Docker image (see `Dockerfile`)
+- deployed to a self-managed VPS behind Traefik at
+  `https://ibiza.srv1115517.hstgr.cloud`, auto-deployed via GitHub Actions
+  (`.github/workflows/deploy.yml`) on every push to `main`: build image →
+  push to GHCR → SSH deploy (`docker compose pull && up -d`)
 
 ## Primary next objective
 
-Prepare a portable, VPS-hosted version without changing the visual product:
+Extract the hardcoded trip content into a typed and validated JSON data
+model, without changing the visual product:
 
-1. Extract all trip content into a typed and validated JSON data model.
+1. Extract all trip content into a typed and validated JSON data model
+   (`data/trip.example.json` + validation, see `HANDOVER.md`).
 2. Preserve every current tab and interaction while reading from that model.
-3. Choose the smallest suitable portable runtime. Prefer a static Vite/React
-   build for the current read-mostly product; use a server only if write-back is
-   explicitly requested.
-4. Add a production multi-stage Dockerfile and a local `docker-compose.yml`.
-5. Add a GitHub Actions workflow that builds and publishes an image to GHCR.
-6. Document a Caddy-based VPS deployment with HTTPS and optional access control.
+3. Since the app is a static export, prefer bundling the JSON at build time
+   for the first version; only add a small server/API if write-back is
+   later explicitly requested (that would also require moving off
+   `output: "export"`).
 
 The detailed handover and acceptance criteria are in `HANDOVER.md`.
 
@@ -39,8 +45,9 @@ The detailed handover and acceptance criteria are in `HANDOVER.md`.
 - Keep secrets in ignored local environment files or VPS secret storage.
 - If real trip data is stored outside the image, use a read-only mounted volume
   unless server-side editing was explicitly requested.
-- Do not remove `.openai/hosting.json`, break the existing Sites deployment, or
-  change its access policy during the VPS migration without explicit approval.
+- Do not change the production Traefik routing/labels in
+  `deploy/docker-compose.yml` or the VPS deployment target without explicit
+  approval.
 - Keep the GitHub repository private unless the user explicitly requests a
   public repository.
 
