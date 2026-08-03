@@ -84,7 +84,7 @@ export default function DiscoverMap({ home, places }: { home: MapHome; places: P
 
     import("leaflet").then(async ({ default: L }) => {
       if (cancelled || !containerRef.current) return;
-      const map = L.map(containerRef.current, { scrollWheelZoom: false }).setView([home.lat, home.lon], 12);
+      const map = L.map(containerRef.current, { scrollWheelZoom: true }).setView([home.lat, home.lon], 12);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>-Mitwirkende',
