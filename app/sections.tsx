@@ -408,13 +408,19 @@ export function Discover({ trip }: { trip: Trip }) {
         <div className="place-grid">
           {visible.map((place, index) => (
             <article className="card place-card" key={place.name}>
-              <span className={`place-color ${place.color}`}>{String(index + 1).padStart(2, "0")}</span>
-              <div><small>{place.type} · {place.area}</small><h2>{place.name}</h2><p>{place.note}</p></div>
-              {hasCoords(place) ? (
-                <a className="place-open" href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer" aria-label={`${place.name} in Google Maps öffnen`}>↗</a>
+              {place.image ? (
+                <img className="place-photo" src={place.image} alt="" loading="lazy" />
               ) : (
-                <span className="place-open place-open-disabled" aria-hidden="true">↗</span>
+                <span className={`place-color ${place.color}`}>{String(index + 1).padStart(2, "0")}</span>
               )}
+              <div className="place-card-body">
+                <div><small>{place.type} · {place.area}</small><h2>{place.name}</h2><p>{place.note}</p></div>
+                {hasCoords(place) ? (
+                  <a className="place-open" href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer" aria-label={`${place.name} in Google Maps öffnen`}>↗</a>
+                ) : (
+                  <span className="place-open place-open-disabled" aria-hidden="true">↗</span>
+                )}
+              </div>
             </article>
           ))}
         </div>

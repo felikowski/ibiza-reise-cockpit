@@ -61,6 +61,7 @@ export interface Place {
   color: string;
   lat?: number;
   lon?: number;
+  image?: string;
 }
 
 export interface BudgetCategory {

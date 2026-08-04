@@ -225,6 +225,7 @@ export const adminPageHtml = `<!doctype html>
     { key: "color", label: "Farbe", type: "text" },
     { key: "lat", label: "Breitengrad (optional, für die Karte)", type: "number" },
     { key: "lon", label: "Längengrad (optional, für die Karte)", type: "number" },
+    { key: "image", label: "Bild-URL (optional, Titelbild in der Karte)", type: "text" },
   ];
 
   var budgetCategoryFields = [
