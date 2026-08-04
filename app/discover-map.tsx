@@ -25,8 +25,9 @@ const TYPE_COLORS: Record<string, string> = {
 };
 const DEFAULT_PIN_COLOR = "#789887";
 
-export function googleMapsUrl(lat: number, lon: number): string {
-  return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+export function googleMapsUrl(place: Pick<Place, "name" | "area">): string {
+  const query = `${place.name}, ${place.area}, Ibiza`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
 function escapeHtml(value: string): string {
@@ -66,7 +67,7 @@ async function renderMarkers(map: LeafletMap, layer: LayerGroup, home: MapHome, 
     const popup =
       `<h3>${escapeHtml(place.name)}</h3><p class="popup-meta">${escapeHtml(place.type)} · ${escapeHtml(place.area)}</p>` +
       (place.note ? `<p>${escapeHtml(place.note)}</p>` : "") +
-      `<a href="${googleMapsUrl(place.lat, place.lon)}" target="_blank" rel="noopener noreferrer">In Google Maps öffnen ↗</a>`;
+      `<a href="${googleMapsUrl(place)}" target="_blank" rel="noopener noreferrer">In Google Maps öffnen ↗</a>`;
     L.marker([place.lat, place.lon], { icon }).addTo(layer).bindPopup(popup);
     bounds.extend([place.lat, place.lon]);
   }

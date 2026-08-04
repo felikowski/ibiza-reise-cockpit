@@ -585,7 +585,7 @@ function Discover({ trip }: { trip: Trip }) {
               <span className={`place-color ${place.color}`}>{String(index + 1).padStart(2, "0")}</span>
               <div><small>{place.type} · {place.area}</small><h2>{place.name}</h2><p>{place.note}</p></div>
               {hasCoords(place) ? (
-                <a className="place-open" href={googleMapsUrl(place.lat, place.lon)} target="_blank" rel="noopener noreferrer" aria-label={`${place.name} in Google Maps öffnen`}>↗</a>
+                <a className="place-open" href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer" aria-label={`${place.name} in Google Maps öffnen`}>↗</a>
               ) : (
                 <span className="place-open place-open-disabled" aria-hidden="true">↗</span>
               )}
