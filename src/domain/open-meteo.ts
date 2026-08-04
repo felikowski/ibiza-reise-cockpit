@@ -8,6 +8,8 @@ export interface DailyWeather {
   tempMax: number;
   tempMin: number;
   weatherCode: number;
+  sunrise: string;
+  sunset: string;
 }
 
 const FORECAST_HORIZON_DAYS = 15;
@@ -29,7 +31,26 @@ interface DailyApiResponse {
     temperature_2m_max: (number | null)[];
     temperature_2m_min: (number | null)[];
     weathercode: number[];
+    sunrise: string[];
+    sunset: string[];
   };
+}
+
+/** Extracts "HH:MM" from an Open-Meteo local ISO timestamp like "2026-09-09T07:12". */
+function formatTime(isoDateTime: string): string {
+  return isoDateTime.slice(11, 16);
+}
+
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(minutes: number): string {
+  const rounded = Math.round(minutes);
+  const hours = Math.floor(rounded / 60) % 24;
+  const mins = rounded % 60;
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
 }
 
 async function fetchDailyRange(
@@ -39,7 +60,7 @@ async function fetchDailyRange(
   startDate: string,
   endDate: string,
 ): Promise<DailyApiResponse> {
-  const url = `${baseUrl}?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`;
+  const url = `${baseUrl}?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,weathercode,sunrise,sunset&timezone=auto`;
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Wetterdienst antwortete mit ${response.status}`);
@@ -95,13 +116,18 @@ export async function fetchLocationWeather(
           tempMax: Math.round(tempMax),
           tempMin: Math.round(tempMin),
           weatherCode: data.daily.weathercode[index],
+          sunrise: formatTime(data.daily.sunrise[index]),
+          sunset: formatTime(data.daily.sunset[index]),
         });
       });
       continue;
     }
 
     const currentYear = today.getFullYear();
-    const samplesByMonthDay = new Map<string, { max: number[]; min: number[]; codes: number[] }>();
+    const samplesByMonthDay = new Map<
+      string,
+      { max: number[]; min: number[]; codes: number[]; sunrise: number[]; sunset: number[] }
+    >();
 
     for (let yearsAgo = 1; yearsAgo <= AVERAGE_YEARS; yearsAgo++) {
       const year = currentYear - yearsAgo;
@@ -120,10 +146,12 @@ export async function fetchLocationWeather(
         const code = data.daily.weathercode[index];
         if (max == null || min == null) return;
         const monthDay = histDate.slice(5);
-        const entry = samplesByMonthDay.get(monthDay) ?? { max: [], min: [], codes: [] };
+        const entry = samplesByMonthDay.get(monthDay) ?? { max: [], min: [], codes: [], sunrise: [], sunset: [] };
         entry.max.push(max);
         entry.min.push(min);
         entry.codes.push(code);
+        entry.sunrise.push(timeToMinutes(formatTime(data.daily.sunrise[index])));
+        entry.sunset.push(timeToMinutes(formatTime(data.daily.sunset[index])));
         samplesByMonthDay.set(monthDay, entry);
       });
     }
@@ -142,6 +170,8 @@ export async function fetchLocationWeather(
         tempMax: Math.round(average(samples.max)),
         tempMin: Math.round(average(samples.min)),
         weatherCode,
+        sunrise: minutesToTime(average(samples.sunrise)),
+        sunset: minutesToTime(average(samples.sunset)),
       });
     }
   }

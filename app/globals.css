@@ -82,9 +82,9 @@ button { color: inherit; }
 .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
 .card-header > div > span { color: var(--coral-deep); font-size: 9px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
 .card-header h2 { margin: 5px 0 0; font: 700 21px/1.2 var(--serif); letter-spacing: -.02em; }
-.card-header button { border: 0; background: transparent; color: var(--muted); padding: 7px 0; cursor: pointer; font-size: 10px; font-weight: 700; }
-.card-header button:hover { color: var(--coral-deep); }
-.card-header button b { color: var(--coral-deep); font-size: 14px; margin-left: 3px; }
+.card-header button, .card-header a { border: 0; background: transparent; color: var(--muted); padding: 7px 0; cursor: pointer; font-size: 10px; font-weight: 700; text-decoration: none; }
+.card-header button:hover, .card-header a:hover { color: var(--coral-deep); }
+.card-header button b, .card-header a b { color: var(--coral-deep); font-size: 14px; margin-left: 3px; }
 
 .flight-row { display: grid; grid-template-columns: 1fr 1.1fr 1fr; align-items: center; margin: 29px 0 19px; }
 .flight-row > div:not(.flight-path) { display: flex; flex-direction: column; }
@@ -164,6 +164,8 @@ button { color: inherit; }
 .weather-day i { font-style: normal; font-size: 22px; margin: 4px 0; }
 .weather-day b { font: 700 20px var(--serif); }
 .weather-day small { color: var(--muted); font-size: 10px; }
+.weather-day-sun { margin: 2px 0 0; display: flex; gap: 8px; }
+.weather-day-sun span { text-transform: none; letter-spacing: 0; font-size: 9px; }
 .weather-kind { margin-top: 6px; font-style: normal; font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; padding: 3px 6px; border-radius: 99px; }
 .weather-kind-forecast { background: #dbe9de; color: #365a44; }
 .weather-kind-recorded { background: #e0e6ea; color: #3d5566; }

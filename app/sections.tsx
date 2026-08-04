@@ -229,7 +229,12 @@ export function Weather({ trip, weather }: { trip: Trip; weather: WeatherState }
       <PageIntro eyebrow="WETTER" title="Wie wird's auf Ibiza?" copy="Live-Vorhersage für dein Reiseziel, dazu Berlin im Vergleich." />
       <div className="weather-layout">
         <div className="card weather-detail-card">
-          <CardHeader kicker={trip.meta.destinationCity} title="Reisewetter, Tag für Tag" />
+          <CardHeader
+            kicker={trip.meta.destinationCity}
+            title="Reisewetter, Tag für Tag"
+            action="wetter.com"
+            href="https://www.wetter.com/wetter_aktuell/wettervorhersage/16_tagesvorhersage/spanien/ibiza-stadt/ES0BA0021.html"
+          />
           <div className="weather-day-grid">
             {dates.map((date) => {
               const day = weather.destination.get(date);
@@ -243,6 +248,7 @@ export function Weather({ trip, weather }: { trip: Trip; weather: WeatherState }
                   <i aria-hidden="true">{info.symbol}</i>
                   <b>{day.tempMax}°</b>
                   <small>{day.tempMin}°</small>
+                  <p className="weather-day-sun"><span>☀ {day.sunrise}</span><span>☾ {day.sunset}</span></p>
                   <em className={`weather-kind weather-kind-${day.kind}`}>{weatherKindLabel(day.kind)}</em>
                 </div>
               );
@@ -700,8 +706,31 @@ export function Documents({ trip }: { trip: Trip }) {
   );
 }
 
-function CardHeader({ kicker, title, action, onAction }: { kicker: string; title: string; action?: string; onAction?: () => void }) {
-  return <header className="card-header"><div><span>{kicker}</span><h2>{title}</h2></div>{action && <button onClick={onAction}>{action} <b>→</b></button>}</header>;
+function CardHeader({
+  kicker,
+  title,
+  action,
+  onAction,
+  href,
+}: {
+  kicker: string;
+  title: string;
+  action?: string;
+  onAction?: () => void;
+  href?: string;
+}) {
+  return (
+    <header className="card-header">
+      <div><span>{kicker}</span><h2>{title}</h2></div>
+      {action && (
+        href ? (
+          <a href={href} target="_blank" rel="noopener noreferrer">{action} <b>↗</b></a>
+        ) : (
+          <button onClick={onAction}>{action} <b>→</b></button>
+        )
+      )}
+    </header>
+  );
 }
 
 function PageIntro({ eyebrow, title, copy }: { eyebrow: string; title: string; copy: string }) {
