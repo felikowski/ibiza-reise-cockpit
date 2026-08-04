@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { TripProvider } from "./app-shell";
 
 export const metadata: Metadata = {
   title: "Isla — Dein Ibiza Reise-Cockpit",
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="de">
-      <body>{children}</body>
+      <body>
+        <TripProvider>{children}</TripProvider>
+      </body>
     </html>
   );
 }
