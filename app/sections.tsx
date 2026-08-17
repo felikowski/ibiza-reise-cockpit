@@ -3,18 +3,18 @@
 import { useState } from "react";
 import type { PackingItem, Trip } from "@/src/domain/trip";
 import {
-  budgetTotals,
-  categoryPercent,
+  budgetGrandTotal,
   confirmedBookings,
   countdownDays,
-  dailyBudget,
   documentsReadiness,
   formatEuro,
+  formatEuroExact,
   hasCoords,
   heroDateRangeLabel,
   nearbyPlaces,
   nightsBetween,
   packingTotals,
+  perPersonShare,
   placeTypes,
   readinessPercent,
   berlinComparisonDays,
@@ -67,7 +67,7 @@ export function Overview({
 }) {
   const nights = nightsBetween(trip.meta);
   const countdown = countdownDays(trip.meta);
-  const totals = budgetTotals(trip.budget);
+  const budgetTotal = budgetGrandTotal(trip.budget);
   const bookings = confirmedBookings(trip);
   const docs = documentsReadiness(trip.documents);
   const packingStats = packingTotals(trip.packing);
@@ -153,10 +153,9 @@ export function Overview({
         </section>
 
         <section className="card budget-mini-card">
-          <CardHeader kicker="Reisekasse" title="Budget im Blick" action="Details" onAction={() => onNavigate("budget")} />
-          <div className="budget-total"><strong>{formatEuro(totals.planned)}</strong><span>von {formatEuro(trip.budget.totalBudget)} verplant</span></div>
-          <div className="progress"><span style={{ width: `${totals.plannedPercent}%` }} /></div>
-          <div className="budget-labels"><span>{totals.plannedPercent} % genutzt</span><b>{formatEuro(totals.remaining)} übrig</b></div>
+          <CardHeader kicker="Reisekasse" title="Wer zahlt was?" action="Details" onAction={() => onNavigate("budget")} />
+          <div className="budget-total"><strong>{formatEuro(budgetTotal)}</strong><span>Flug, Mietwagen &amp; Unterkunft zusammen</span></div>
+          <div className="budget-labels"><span>Pro Person</span><b>{formatEuroExact(perPersonShare(budgetTotal))}</b></div>
         </section>
 
         <section className="card tip-card">
@@ -430,28 +429,22 @@ export function Discover({ trip }: { trip: Trip }) {
 }
 
 export function Budget({ trip }: { trip: Trip }) {
-  const totals = budgetTotals(trip.budget);
-  const totalDays = trip.itineraryDays.length;
-  const daily = dailyBudget(trip.budget, totalDays);
+  const grandTotal = budgetGrandTotal(trip.budget);
   return (
     <section className="page inner-page">
-      <PageIntro eyebrow="BUDGET" title="Mehr Insel, weniger Kopfrechnen." copy="Geplante und bereits bezahlte Kosten, sauber nach Kategorien sortiert." />
-      <div className="budget-dashboard">
-        <div className="card big-budget">
-          <span>Gesamtbudget</span><strong>{formatEuro(trip.budget.totalBudget)}</strong><p>für {trip.meta.travelersCount} Personen · {totalDays} Tage</p>
-          <div className="big-progress"><i style={{ width: `${totals.plannedPercent}%` }} /></div>
-          <div><span><b>{formatEuro(totals.planned)}</b> verplant</span><span><b>{formatEuro(totals.remaining)}</b> verfügbar</span></div>
-        </div>
-        <div className="card daily-budget"><span>Freies Tagesbudget</span><strong>{formatEuro(daily)}</strong><p>pro Reisetag für euch beide</p><small>Auf Basis des Restbudgets</small></div>
-        <div className="card category-budget">
-          <CardHeader kicker="Kategorien" title="So verteilt sich die Reisekasse" />
-          {trip.budget.categories.map((category) => <div className="category-row" key={category.name}><span>{category.name}</span><div><i className={category.color} style={{ width: `${categoryPercent(category)}%` }} /></div><b>{formatEuro(category.amount)}</b></div>)}
-        </div>
-        <div className="card paid-list"><CardHeader kicker="Status" title="Schon bezahlt" />
-          {trip.budget.paid.map((item) => (
-            <div key={item.label}><span>{item.label}</span><b>{formatEuro(item.amount)}</b><i className={item.status === "on_site" ? "open" : undefined}>{item.status === "on_site" ? "vor Ort" : "✓"}</i></div>
-          ))}
-          <footer><span>Bezahlt</span><strong>{formatEuro(totals.paidTotal)}</strong></footer>
+      <PageIntro eyebrow="BUDGET" title="Wer zahlt was?" copy="Flug, Mietwagen und Unterkunft, aufgeteilt auf alle drei Reisenden." />
+      <div className="cost-split-grid">
+        {trip.budget.categories.map((category) => (
+          <div className="card cost-split-card" key={category.name}>
+            <span className={category.color}>{category.name}</span>
+            <strong>{formatEuro(category.amount)}</strong>
+            <div><span>Pro Person</span><b>{formatEuroExact(perPersonShare(category.amount))}</b></div>
+          </div>
+        ))}
+        <div className="card cost-split-total">
+          <span>Gesamt</span>
+          <strong>{formatEuro(grandTotal)}</strong>
+          <div><span>Pro Person</span><b>{formatEuroExact(perPersonShare(grandTotal))}</b></div>
         </div>
       </div>
     </section>

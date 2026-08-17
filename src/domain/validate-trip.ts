@@ -3,7 +3,6 @@ import type { Trip } from "./trip";
 
 const dayToneSchema = z.enum(["sun", "water", "peach", "sage", "stone"]);
 const bookingStatusSchema = z.enum(["confirmed", "pending"]);
-const paidStatusSchema = z.enum(["paid", "on_site"]);
 
 const flightLegSchema = z.object({
   dateLabel: z.string().min(1),
@@ -70,20 +69,11 @@ const placeSchema = z.object({
 const budgetCategorySchema = z.object({
   name: z.string().min(1),
   amount: z.number().nonnegative(),
-  budgeted: z.number().positive(),
   color: z.string().min(1),
 });
 
-const paidItemSchema = z.object({
-  label: z.string().min(1),
-  amount: z.number().nonnegative(),
-  status: paidStatusSchema,
-});
-
 const budgetSchema = z.object({
-  totalBudget: z.number().positive(),
   categories: z.array(budgetCategorySchema).min(1),
-  paid: z.array(paidItemSchema).min(1),
 });
 
 const packingPersonSchema = z.object({

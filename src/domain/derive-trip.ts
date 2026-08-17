@@ -1,8 +1,14 @@
 import { addDays, enumerateDates, formatISODate, parseISODate } from "./dates";
-import type { Budget, BudgetCategory, DocumentItem, Packing, Place, Trip, TripMeta } from "./trip";
+import type { Budget, DocumentItem, Packing, Place, Trip, TripMeta } from "./trip";
+
+export const BUDGET_SHARE_COUNT = 3;
 
 export function formatEuro(amount: number): string {
   return `${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 }).format(amount)} €`;
+}
+
+export function formatEuroExact(amount: number): string {
+  return `${new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)} €`;
 }
 
 export function heroDateRangeLabel(meta: TripMeta): string {
@@ -25,24 +31,12 @@ export function countdownDays(meta: TripMeta, now: Date = new Date()): number {
   return Math.max(diff, 0);
 }
 
-export function budgetTotals(budget: Budget) {
-  const planned = budget.categories.reduce((sum, category) => sum + category.amount, 0);
-  const plannedPercent = Math.round((planned / budget.totalBudget) * 100);
-  const remaining = budget.totalBudget - planned;
-  const paidTotal = budget.paid
-    .filter((item) => item.status === "paid")
-    .reduce((sum, item) => sum + item.amount, 0);
-  return { planned, plannedPercent, remaining, paidTotal };
+export function budgetGrandTotal(budget: Budget): number {
+  return budget.categories.reduce((sum, category) => sum + category.amount, 0);
 }
 
-export function categoryPercent(category: BudgetCategory): number {
-  return Math.round((category.amount / category.budgeted) * 100);
-}
-
-export function dailyBudget(budget: Budget, totalDays: number): number {
-  if (totalDays <= 0) return 0;
-  const { remaining } = budgetTotals(budget);
-  return Math.round(remaining / totalDays);
+export function perPersonShare(amount: number): number {
+  return amount / BUDGET_SHARE_COUNT;
 }
 
 export function packingTotals(packing: Packing) {

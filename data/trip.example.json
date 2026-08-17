@@ -205,18 +205,10 @@
     { "name": "Hï Ibiza", "type": "Club", "area": "Playa d'en Bossa", "note": "Nachfolger von Space, edler Sound", "color": "aqua", "lat": 38.886, "lon": 1.4039, "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Nico%20Aloisio%20H%C3%8F%20Ibiza%20Club%20Room.jpg?width=800" }
   ],
   "budget": {
-    "totalBudget": 3000,
     "categories": [
-      { "name": "Unterkunft", "amount": 980, "budgeted": 1195, "color": "coral" },
-      { "name": "Flüge", "amount": 486, "budgeted": 486, "color": "blue" },
-      { "name": "Mietwagen", "amount": 318, "budgeted": 398, "color": "sun" },
-      { "name": "Essen & Trinken", "amount": 240, "budgeted": 750, "color": "sage" },
-      { "name": "Erlebnisse", "amount": 160, "budgeted": 400, "color": "lavender" }
-    ],
-    "paid": [
-      { "label": "Flüge", "amount": 486, "status": "paid" },
-      { "label": "Finca · Anzahlung", "amount": 490, "status": "paid" },
-      { "label": "Mietwagen · Reservierung", "amount": 0, "status": "on_site" }
+      { "name": "Unterkunft", "amount": 2384.84, "color": "coral" },
+      { "name": "Flüge", "amount": 486, "color": "blue" },
+      { "name": "Mietwagen", "amount": 318, "color": "sun" }
     ]
   },
   "packing": {

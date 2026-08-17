@@ -1,6 +1,5 @@
 export type DayTone = "sun" | "water" | "peach" | "sage" | "stone";
 export type BookingStatus = "confirmed" | "pending";
-export type PaidStatus = "paid" | "on_site";
 
 export interface FlightLeg {
   dateLabel: string;
@@ -67,20 +66,11 @@ export interface Place {
 export interface BudgetCategory {
   name: string;
   amount: number;
-  budgeted: number;
   color: string;
 }
 
-export interface PaidItem {
-  label: string;
-  amount: number;
-  status: PaidStatus;
-}
-
 export interface Budget {
-  totalBudget: number;
   categories: BudgetCategory[];
-  paid: PaidItem[];
 }
 
 export interface PackingPerson {

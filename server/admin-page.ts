@@ -95,7 +95,6 @@ export const adminPageHtml = `<!doctype html>
   }
 
   var STATUS_OPTIONS = [{ value: "confirmed", label: "Bestätigt" }, { value: "pending", label: "Ausstehend" }];
-  var PAID_STATUS_OPTIONS = [{ value: "paid", label: "Bezahlt" }, { value: "on_site", label: "Vor Ort" }];
   var TONE_OPTIONS = [
     { value: "sun", label: "Sonne" },
     { value: "water", label: "Wasser" },
@@ -231,14 +230,7 @@ export const adminPageHtml = `<!doctype html>
   var budgetCategoryFields = [
     { key: "name", label: "Name", type: "text" },
     { key: "amount", label: "Betrag (€)", type: "number" },
-    { key: "budgeted", label: "Geplant (€)", type: "number" },
     { key: "color", label: "Farbe", type: "text" },
-  ];
-
-  var paidItemFields = [
-    { key: "label", label: "Bezeichnung", type: "text" },
-    { key: "amount", label: "Betrag (€)", type: "number" },
-    { key: "status", label: "Status", type: "select", options: PAID_STATUS_OPTIONS },
   ];
 
   var packingPersonFields = [
@@ -294,10 +286,8 @@ export const adminPageHtml = `<!doctype html>
   }
 
   function renderBudgetSection() {
-    var html = '<h2 class="section-title">Budget</h2>';
-    html += '<div class="field-grid">' + fieldHtml(["budget", "totalBudget"], { key: "totalBudget", label: "Gesamtbudget (€)", type: "number" }, data.budget.totalBudget) + "</div>";
-    html += '<h3 class="subcard-subtitle">Kategorien</h3>' + listSectionHtml(["budget", "categories"], budgetCategoryFields, data.budget.categories, "Kategorie");
-    html += '<h3 class="subcard-subtitle">Bezahlt</h3>' + listSectionHtml(["budget", "paid"], paidItemFields, data.budget.paid, "Posten");
+    var html = '<h2 class="section-title">Budget</h2><p class="section-hint">Flug, Mietwagen und Unterkunft — jeder Betrag wird auf der Budget-Seite durch drei geteilt.</p>';
+    html += listSectionHtml(["budget", "categories"], budgetCategoryFields, data.budget.categories, "Kategorie");
     return html;
   }
 
@@ -363,8 +353,7 @@ export const adminPageHtml = `<!doctype html>
       itineraryDays: function () { return { weekday: "", dateLabel: "", title: "", note: "", tone: "sun", timeline: [] }; },
       timeline: function () { return { time: "", title: "", note: "", highlight: false }; },
       places: function () { return { name: "", type: "", area: "", note: "", color: "" }; },
-      categories: function () { return { name: "", amount: 0, budgeted: 0, color: "" }; },
-      paid: function () { return { label: "", amount: 0, status: "on_site" }; },
+      categories: function () { return { name: "", amount: 0, color: "" }; },
       documents: function () { return { title: "", meta: "", status: "", symbol: "" }; },
       emergencyContacts: function () { return { label: "", phone: "" }; },
       practicalFacts: function () { return { label: "", value: "" }; },
