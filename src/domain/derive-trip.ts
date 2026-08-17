@@ -3,10 +3,6 @@ import type { Budget, DocumentItem, Packing, Place, Trip, TripMeta } from "./tri
 
 export const BUDGET_SHARE_COUNT = 3;
 
-export function formatEuro(amount: number): string {
-  return `${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 }).format(amount)} €`;
-}
-
 export function formatEuroExact(amount: number): string {
   return `${new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)} €`;
 }

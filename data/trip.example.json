@@ -207,8 +207,8 @@
   "budget": {
     "categories": [
       { "name": "Unterkunft", "amount": 2384.84, "color": "coral" },
-      { "name": "Flüge", "amount": 486, "color": "blue" },
-      { "name": "Mietwagen", "amount": 318, "color": "sun" }
+      { "name": "Flüge", "amount": 721.38, "color": "blue" },
+      { "name": "Mietwagen", "amount": 248.66, "color": "sun" }
     ]
   },
   "packing": {

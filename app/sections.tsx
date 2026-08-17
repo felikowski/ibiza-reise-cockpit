@@ -7,7 +7,6 @@ import {
   confirmedBookings,
   countdownDays,
   documentsReadiness,
-  formatEuro,
   formatEuroExact,
   hasCoords,
   heroDateRangeLabel,
@@ -154,7 +153,7 @@ export function Overview({
 
         <section className="card budget-mini-card">
           <CardHeader kicker="Reisekasse" title="Wer zahlt was?" action="Details" onAction={() => onNavigate("budget")} />
-          <div className="budget-total"><strong>{formatEuro(budgetTotal)}</strong><span>Flug, Mietwagen &amp; Unterkunft zusammen</span></div>
+          <div className="budget-total"><strong>{formatEuroExact(budgetTotal)}</strong><span>Flug, Mietwagen &amp; Unterkunft zusammen</span></div>
           <div className="budget-labels"><span>Pro Person</span><b>{formatEuroExact(perPersonShare(budgetTotal))}</b></div>
         </section>
 
@@ -437,13 +436,13 @@ export function Budget({ trip }: { trip: Trip }) {
         {trip.budget.categories.map((category) => (
           <div className="card cost-split-card" key={category.name}>
             <span className={category.color}>{category.name}</span>
-            <strong>{formatEuro(category.amount)}</strong>
+            <strong>{formatEuroExact(category.amount)}</strong>
             <div><span>Pro Person</span><b>{formatEuroExact(perPersonShare(category.amount))}</b></div>
           </div>
         ))}
         <div className="card cost-split-total">
           <span>Gesamt</span>
-          <strong>{formatEuro(grandTotal)}</strong>
+          <strong>{formatEuroExact(grandTotal)}</strong>
           <div><span>Pro Person</span><b>{formatEuroExact(perPersonShare(grandTotal))}</b></div>
         </div>
       </div>
