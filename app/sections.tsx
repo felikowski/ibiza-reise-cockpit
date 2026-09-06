@@ -76,7 +76,7 @@ export function Overview({
   return (
     <section className="page page-overview">
       <div className="hero">
-        <div className="godless-sticker" aria-hidden="true"><i>🔥</i> Chaos-Modus: an <i>🔥</i></div>
+        <div className="godless-sticker" aria-hidden="true"><i>💊</i><i>🍺</i></div>
         <div className="hero-copy">
           <div className="eyebrow"><span /> DEINE REISE</div>
           <h1>{trip.meta.title}<br /><em>{trip.meta.titleAccent}</em></h1>
