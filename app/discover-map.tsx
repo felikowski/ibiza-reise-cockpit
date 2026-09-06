@@ -22,6 +22,7 @@ const TYPE_COLORS: Record<string, string> = {
   Aussicht: "#d95845",
   Kultur: "#c79767",
   Höhle: "#789887",
+  Sehenswürdigkeit: "#4f8a6d",
 };
 const DEFAULT_PIN_COLOR = "#789887";
 
