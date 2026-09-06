@@ -76,6 +76,7 @@ export function Overview({
   return (
     <section className="page page-overview">
       <div className="hero">
+        <div className="godless-sticker" aria-hidden="true"><i>🔥</i> Chaos-Modus: an <i>🔥</i></div>
         <div className="hero-copy">
           <div className="eyebrow"><span /> DEINE REISE</div>
           <h1>{trip.meta.title}<br /><em>{trip.meta.titleAccent}</em></h1>
@@ -94,7 +95,7 @@ export function Overview({
           <div className="countdown-number">{countdown}</div>
           <div className="countdown-days">Tage</div>
           <div className="countdown-rule" />
-          <p>Vorfreude ist<br />die schönste Reisezeit.</p>
+          <p>Erst der Countdown.<br />Dann das kalte Bier.</p>
         </div>
       </div>
 
@@ -312,7 +313,10 @@ export function TravelPlan({ trip }: { trip: Trip }) {
         <aside className="card plan-note">
           <span className="note-icon">☼</span>
           <h3>Raum für Spontanes</h3>
-          <p>Plane nie mehr als zwei feste Punkte pro Tag. Die schönsten Buchten liegen oft dazwischen.</p>
+          <div className="meme-drake">
+            <div className="meme-row reject"><span className="meme-emoji">🙅‍♂️</span><p>Minutentakt mit Uhrzeit für jede Bucht</p></div>
+            <div className="meme-row approve"><span className="meme-emoji">😎</span><p>Auto volltanken, Kühlbox laden, Rest ergibt sich</p></div>
+          </div>
           <div><span>Reservierungen</span><b>2 offen</b></div>
           <div><span>Freie Zeit</span><b>3 halbe Tage</b></div>
         </aside>
@@ -399,7 +403,7 @@ export function Discover({ trip }: { trip: Trip }) {
   };
   return (
     <section className="page inner-page">
-      <PageIntro eyebrow="ENTDECKEN" title="Orte, die nach Inselzeit schmecken." copy="Deine Merkliste für Buchten, Dörfer, gutes Essen und die besten Aussichten." />
+      <PageIntro eyebrow="ENTDECKEN" title="Buchten, Bars, Aussichtspunkte." copy="Deine Merkliste für Buchten, Dörfer, gutes Essen und die besten Aussichten." />
       <div className="filter-row">{filterOptions.map((item) => <button key={item} onClick={() => setFilter(item)} className={filter === item ? "active" : ""}>{item}</button>)}</div>
       <div className="places-layout">
         <DiscoverMap home={home} places={visible} />
