@@ -66,115 +66,123 @@
   },
   "itineraryDays": [
     {
+      "id": "tag-01-ankommen-einchecken",
       "weekday": "Mi",
       "dateLabel": "09. Sep",
       "title": "Ankommen & einchecken",
       "note": "Flug, Mietwagen, Finca",
       "tone": "sun",
       "timeline": [
-        { "time": "05:55", "title": "Am Flughafen", "note": "BER · Terminal 1", "highlight": false },
-        { "time": "08:25", "title": "Abflug nach Ibiza", "note": "Eurowings EW 8540", "highlight": true },
-        { "time": "11:45", "title": "Mietwagen übernehmen", "note": "Centauro · Shuttle-Zone", "highlight": false },
-        { "time": "14:00", "title": "Check-in in der Finca", "note": "Santa Gertrudis", "highlight": false },
-        { "time": "19:30", "title": "Willkommensdinner", "note": "Tisch noch reservieren", "highlight": false }
+        { "id": "tag-01-ankommen-einchecken-t01", "time": "05:55", "title": "Am Flughafen", "note": "BER · Terminal 1", "highlight": false },
+        { "id": "tag-01-ankommen-einchecken-t02", "time": "08:25", "title": "Abflug nach Ibiza", "note": "Eurowings EW 8540", "highlight": true },
+        { "id": "tag-01-ankommen-einchecken-t03", "time": "11:45", "title": "Mietwagen übernehmen", "note": "Centauro · Shuttle-Zone", "highlight": false },
+        { "id": "tag-01-ankommen-einchecken-t04", "time": "14:00", "title": "Check-in in der Finca", "note": "Santa Gertrudis", "highlight": false },
+        { "id": "tag-01-ankommen-einchecken-t05", "time": "19:30", "title": "Willkommensdinner", "note": "Tisch noch reservieren", "highlight": false }
       ]
     },
     {
+      "id": "tag-02-nordk-ste",
       "weekday": "Do",
       "dateLabel": "10. Sep",
       "title": "Nordküste",
       "note": "Cala Xarraca · Sunset",
       "tone": "water",
       "timeline": [
-        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
-        { "time": "11:00", "title": "Nordküste", "note": "Cala Xarraca · Sunset", "highlight": true },
-        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
-        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
-        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+        { "id": "tag-02-nordk-ste-t01", "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "id": "tag-02-nordk-ste-t02", "time": "11:00", "title": "Nordküste", "note": "Cala Xarraca · Sunset", "highlight": true },
+        { "id": "tag-02-nordk-ste-t03", "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "id": "tag-02-nordk-ste-t04", "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "id": "tag-02-nordk-ste-t05", "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
       ]
     },
     {
+      "id": "tag-03-altstadt-tapas",
       "weekday": "Fr",
       "dateLabel": "11. Sep",
       "title": "Altstadt & Tapas",
       "note": "Dalt Vila · La Marina",
       "tone": "peach",
       "timeline": [
-        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
-        { "time": "11:00", "title": "Altstadt & Tapas", "note": "Dalt Vila · La Marina", "highlight": true },
-        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
-        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
-        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+        { "id": "tag-03-altstadt-tapas-t01", "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "id": "tag-03-altstadt-tapas-t02", "time": "11:00", "title": "Altstadt & Tapas", "note": "Dalt Vila · La Marina", "highlight": true },
+        { "id": "tag-03-altstadt-tapas-t03", "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "id": "tag-03-altstadt-tapas-t04", "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "id": "tag-03-altstadt-tapas-t05", "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
       ]
     },
     {
+      "id": "tag-04-formentera",
       "weekday": "Sa",
       "dateLabel": "12. Sep",
       "title": "Formentera",
       "note": "Fähre · Roller · Strand",
       "tone": "water",
       "timeline": [
-        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
-        { "time": "11:00", "title": "Formentera", "note": "Fähre · Roller · Strand", "highlight": true },
-        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
-        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
-        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+        { "id": "tag-04-formentera-t01", "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "id": "tag-04-formentera-t02", "time": "11:00", "title": "Formentera", "note": "Fähre · Roller · Strand", "highlight": true },
+        { "id": "tag-04-formentera-t03", "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "id": "tag-04-formentera-t04", "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "id": "tag-04-formentera-t05", "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
       ]
     },
     {
+      "id": "tag-05-freier-tag",
       "weekday": "So",
       "dateLabel": "13. Sep",
       "title": "Freier Tag",
       "note": "Pool · Markt · spontan",
       "tone": "sage",
       "timeline": [
-        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
-        { "time": "11:00", "title": "Freier Tag", "note": "Pool · Markt · spontan", "highlight": true },
-        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
-        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
-        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+        { "id": "tag-05-freier-tag-t01", "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "id": "tag-05-freier-tag-t02", "time": "11:00", "title": "Freier Tag", "note": "Pool · Markt · spontan", "highlight": true },
+        { "id": "tag-05-freier-tag-t03", "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "id": "tag-05-freier-tag-t04", "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "id": "tag-05-freier-tag-t05", "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
       ]
     },
     {
+      "id": "tag-06-beach-club",
       "weekday": "Mo",
       "dateLabel": "14. Sep",
       "title": "Beach Club",
       "note": "Lunch · Cala Jondal",
       "tone": "peach",
       "timeline": [
-        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
-        { "time": "11:00", "title": "Beach Club", "note": "Lunch · Cala Jondal", "highlight": true },
-        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
-        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
-        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+        { "id": "tag-06-beach-club-t01", "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "id": "tag-06-beach-club-t02", "time": "11:00", "title": "Beach Club", "note": "Lunch · Cala Jondal", "highlight": true },
+        { "id": "tag-06-beach-club-t03", "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "id": "tag-06-beach-club-t04", "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "id": "tag-06-beach-club-t05", "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
       ]
     },
     {
+      "id": "tag-07-es-vedr",
       "weekday": "Di",
       "dateLabel": "15. Sep",
       "title": "Es Vedrà",
       "note": "Aussicht · Abschiedsessen",
       "tone": "sun",
       "timeline": [
-        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
-        { "time": "11:00", "title": "Es Vedrà", "note": "Aussicht · Abschiedsessen", "highlight": true },
-        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
-        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
-        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+        { "id": "tag-07-es-vedr-t01", "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "id": "tag-07-es-vedr-t02", "time": "11:00", "title": "Es Vedrà", "note": "Aussicht · Abschiedsessen", "highlight": true },
+        { "id": "tag-07-es-vedr-t03", "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "id": "tag-07-es-vedr-t04", "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "id": "tag-07-es-vedr-t05", "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
       ]
     },
     {
+      "id": "tag-08-heimreise",
       "weekday": "Mi",
       "dateLabel": "16. Sep",
       "title": "Heimreise",
       "note": "Check-out · Rückflug",
       "tone": "stone",
       "timeline": [
-        { "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
-        { "time": "11:00", "title": "Heimreise", "note": "Check-out · Rückflug", "highlight": true },
-        { "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
-        { "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
-        { "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
+        { "id": "tag-08-heimreise-t01", "time": "09:00", "title": "Ruhiger Start", "note": "Frühstück in der Finca", "highlight": false },
+        { "id": "tag-08-heimreise-t02", "time": "11:00", "title": "Heimreise", "note": "Check-out · Rückflug", "highlight": true },
+        { "id": "tag-08-heimreise-t03", "time": "14:00", "title": "Lunch & Siesta", "note": "Flexibler Zwischenstopp", "highlight": false },
+        { "id": "tag-08-heimreise-t04", "time": "18:30", "title": "Golden Hour", "note": "Lieblingsplatz auswählen", "highlight": false },
+        { "id": "tag-08-heimreise-t05", "time": "21:00", "title": "Abendessen", "note": "Optionen gespeichert", "highlight": false }
       ]
     }
   ],

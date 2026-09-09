@@ -378,8 +378,8 @@ export const adminPageHtml = `<!doctype html>
       return window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : "item-" + Date.now() + "-" + Math.random().toString(36).slice(2);
     }
     var generators = {
-      itineraryDays: function () { return { weekday: "", dateLabel: "", title: "", note: "", tone: "sun", timeline: [] }; },
-      "itineraryDays.timeline": function () { return { time: "", title: "", note: "", highlight: false }; },
+      itineraryDays: function () { return { id: newId(), weekday: "", dateLabel: "", title: "", note: "", tone: "sun", timeline: [] }; },
+      "itineraryDays.timeline": function () { return { id: newId(), time: "", title: "", note: "", highlight: false }; },
       places: function () { return { name: "", type: "", area: "", note: "", color: "" }; },
       "budget.categories": function () { return { name: "", amount: 0, color: "" }; },
       documents: function () { return { title: "", meta: "", status: "", symbol: "" }; },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PackingItem, ShoppingItem, Trip } from "@/src/domain/trip";
+import type { DayTone, ItineraryDay, PackingItem, ShoppingItem, TimelineEntry, Trip } from "@/src/domain/trip";
 import {
   budgetGrandTotal,
   confirmedBookings,
@@ -66,6 +66,45 @@ function patchShoppingItem(itemId: string, patch: { checked: boolean }): Promise
 
 function removeShoppingItem(itemId: string): Promise<Trip> {
   return submitTripRequest(`/api/shopping/items/${itemId}`, "DELETE");
+}
+
+interface ItineraryDayFields {
+  weekday: string;
+  dateLabel: string;
+  title: string;
+  note: string;
+  tone: DayTone;
+}
+
+interface TimelineEntryFields {
+  time: string;
+  title: string;
+  note: string;
+  highlight: boolean;
+}
+
+function addItineraryDay(fields: ItineraryDayFields): Promise<Trip> {
+  return submitTripRequest("/api/itinerary/days", "POST", fields);
+}
+
+function patchItineraryDay(dayId: string, patch: Partial<ItineraryDayFields>): Promise<Trip> {
+  return submitTripRequest(`/api/itinerary/days/${dayId}`, "PATCH", patch);
+}
+
+function removeItineraryDay(dayId: string): Promise<Trip> {
+  return submitTripRequest(`/api/itinerary/days/${dayId}`, "DELETE");
+}
+
+function addTimelineEntry(dayId: string, fields: TimelineEntryFields): Promise<Trip> {
+  return submitTripRequest(`/api/itinerary/days/${dayId}/timeline`, "POST", fields);
+}
+
+function patchTimelineEntry(entryId: string, patch: Partial<TimelineEntryFields>): Promise<Trip> {
+  return submitTripRequest(`/api/itinerary/timeline/${entryId}`, "PATCH", patch);
+}
+
+function removeTimelineEntry(entryId: string): Promise<Trip> {
+  return submitTripRequest(`/api/itinerary/timeline/${entryId}`, "DELETE");
 }
 
 export function Overview({
@@ -298,31 +337,159 @@ function weatherKindLabel(kind: DailyWeather["kind"]): string {
   return "Ø 5 Jahre";
 }
 
-export function TravelPlan({ trip }: { trip: Trip }) {
+const DAY_TONE_OPTIONS: { value: DayTone; label: string }[] = [
+  { value: "sun", label: "Sonne" },
+  { value: "water", label: "Wasser" },
+  { value: "peach", label: "Pfirsich" },
+  { value: "sage", label: "Salbei" },
+  { value: "stone", label: "Stein" },
+];
+
+const NEW_DAY_DRAFT: ItineraryDay = { id: "", weekday: "", dateLabel: "", title: "", note: "", tone: "sun", timeline: [] };
+
+export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (trip: Trip) => void }) {
   const [selected, setSelected] = useState(0);
-  const detail = trip.itineraryDays[selected];
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editingDay, setEditingDay] = useState(false);
+  const [addingDay, setAddingDay] = useState(false);
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [addingEntry, setAddingEntry] = useState(false);
+
+  const dayIndex = Math.min(selected, trip.itineraryDays.length - 1);
+  const day = trip.itineraryDays[dayIndex];
+
+  const run = async (action: () => Promise<Trip>) => {
+    setPending(true);
+    setError(null);
+    try {
+      onTripChange(await action());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const selectDay = (index: number) => {
+    setSelected(index);
+    setEditingDay(false);
+    setAddingDay(false);
+    setEditingEntryId(null);
+    setAddingEntry(false);
+  };
+
+  const handleAddDay = (fields: ItineraryDayFields) =>
+    run(async () => {
+      const updated = await addItineraryDay(fields);
+      setSelected(updated.itineraryDays.length - 1);
+      setAddingDay(false);
+      return updated;
+    });
+
+  const handleRemoveDay = (dayId: string) =>
+    run(async () => {
+      const updated = await removeItineraryDay(dayId);
+      setSelected((current) => Math.min(current, updated.itineraryDays.length - 1));
+      return updated;
+    });
+
+  const handleSaveDay = (dayId: string, patch: ItineraryDayFields) =>
+    run(async () => {
+      const updated = await patchItineraryDay(dayId, patch);
+      setEditingDay(false);
+      return updated;
+    });
+
+  const handleAddEntry = (dayId: string, fields: TimelineEntryFields) =>
+    run(async () => {
+      const updated = await addTimelineEntry(dayId, fields);
+      setAddingEntry(false);
+      return updated;
+    });
+
+  const handleSaveEntry = (entryId: string, patch: TimelineEntryFields) =>
+    run(async () => {
+      const updated = await patchTimelineEntry(entryId, patch);
+      setEditingEntryId(null);
+      return updated;
+    });
+
+  const handleRemoveEntry = (entryId: string) => run(() => removeTimelineEntry(entryId));
+
   return (
     <section className="page inner-page">
-      <PageIntro eyebrow="REISEPLAN" title="Acht Tage, genau dein Tempo." copy="Alle Etappen auf einen Blick — mit genug Luft für spontane Inselmomente." />
+      <PageIntro eyebrow="REISEPLAN" title="Genau dein Tempo." copy="Alle Etappen auf einen Blick — und direkt hier anpassbar." />
       <div className="plan-layout">
         <div className="day-selector" role="tablist" aria-label="Reisetage">
           {trip.itineraryDays.map((item, index) => (
-            <button key={item.dateLabel} className={selected === index ? "selected" : ""} onClick={() => setSelected(index)} role="tab" aria-selected={selected === index}>
-              <span>{item.weekday}</span><b>{item.dateLabel.split(" ")[0]}</b><small>{item.dateLabel.split(" ")[1]}</small>
+            <button key={item.id} className={dayIndex === index ? "selected" : ""} onClick={() => selectDay(index)} role="tab" aria-selected={dayIndex === index}>
+              <span>{item.weekday || "–"}</span><b>{item.dateLabel.split(" ")[0] || "–"}</b><small>{item.dateLabel.split(" ")[1] ?? ""}</small>
             </button>
           ))}
+          <button type="button" className="day-add" onClick={() => { setAddingDay(true); setEditingDay(false); setEditingEntryId(null); setAddingEntry(false); }} disabled={pending} aria-label="Tag hinzufügen">+</button>
         </div>
+
+        {error && <p className="packing-error">{error}</p>}
+
         <div className="card day-detail">
-          <div className="day-detail-head">
-            <div><span>{detail.dateLabel} · Tag {selected + 1}</span><h2>{detail.title}</h2><p>{detail.note}</p></div>
-            <i className={`large-day-dot ${detail.tone}`} />
-          </div>
-          <div className="timeline">
-            {detail.timeline.map((entry) => (
-              <div className="timeline-row" key={`${entry.time}-${entry.title}`}><time>{entry.time}</time><i className={entry.highlight ? "accent" : ""} /><div><b>{entry.title}</b><span>{entry.note}</span></div>{entry.highlight && <em>Highlight</em>}</div>
-            ))}
-          </div>
+          {addingDay ? (
+            <>
+              <h2 className="day-edit-heading">Neuer Reisetag</h2>
+              <DayEditForm day={NEW_DAY_DRAFT} pending={pending} submitLabel="Tag anlegen" onSave={handleAddDay} onCancel={() => setAddingDay(false)} />
+            </>
+          ) : (
+            <>
+              {editingDay ? (
+                <DayEditForm day={day} pending={pending} submitLabel="Speichern" onSave={(patch) => handleSaveDay(day.id, patch)} onCancel={() => setEditingDay(false)} />
+              ) : (
+                <div className="day-detail-head">
+                  <div><span>{day.dateLabel} · Tag {dayIndex + 1}</span><h2>{day.title}</h2><p>{day.note}</p></div>
+                  <div className="day-detail-actions">
+                    <i className={`large-day-dot ${day.tone}`} />
+                    <button type="button" className="day-edit-btn" onClick={() => setEditingDay(true)} disabled={pending}>Bearbeiten</button>
+                    {trip.itineraryDays.length > 1 && (
+                      <button type="button" className="day-remove-btn" onClick={() => handleRemoveDay(day.id)} disabled={pending}>Tag entfernen</button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="timeline">
+                {day.timeline.map((entry) =>
+                  editingEntryId === entry.id ? (
+                    <TimelineEntryEditForm
+                      key={entry.id}
+                      entry={entry}
+                      pending={pending}
+                      onSave={(patch) => handleSaveEntry(entry.id, patch)}
+                      onCancel={() => setEditingEntryId(null)}
+                    />
+                  ) : (
+                    <div className="timeline-row" key={entry.id}>
+                      <time>{entry.time}</time>
+                      <i className={entry.highlight ? "accent" : ""} />
+                      <div><b>{entry.title}</b><span>{entry.note}</span></div>
+                      <div className="timeline-row-actions">
+                        {entry.highlight && <em>Highlight</em>}
+                        <button type="button" className="timeline-edit" aria-label={`${entry.title} bearbeiten`} onClick={() => setEditingEntryId(entry.id)} disabled={pending}>✎</button>
+                        <button type="button" className="packing-remove" aria-label={`${entry.title} entfernen`} onClick={() => handleRemoveEntry(entry.id)} disabled={pending}>×</button>
+                      </div>
+                    </div>
+                  ),
+                )}
+                {day.timeline.length === 0 && !addingEntry && <p className="timeline-empty">Noch kein Tagesablauf für diesen Tag.</p>}
+              </div>
+
+              {addingEntry ? (
+                <TimelineAddForm pending={pending} onAdd={(fields) => handleAddEntry(day.id, fields)} onCancel={() => setAddingEntry(false)} />
+              ) : (
+                <button type="button" className="timeline-add-toggle" onClick={() => setAddingEntry(true)} disabled={pending}>+ Eintrag hinzufügen</button>
+              )}
+            </>
+          )}
         </div>
+
         <aside className="card plan-note">
           <span className="note-icon">☼</span>
           <h3>Raum für Spontanes</h3>
@@ -335,6 +502,128 @@ export function TravelPlan({ trip }: { trip: Trip }) {
         </aside>
       </div>
     </section>
+  );
+}
+
+function DayEditForm({
+  day,
+  pending,
+  submitLabel,
+  onSave,
+  onCancel,
+}: {
+  day: ItineraryDay;
+  pending: boolean;
+  submitLabel: string;
+  onSave: (fields: ItineraryDayFields) => void;
+  onCancel: () => void;
+}) {
+  const [weekday, setWeekday] = useState(day.weekday);
+  const [dateLabel, setDateLabel] = useState(day.dateLabel);
+  const [title, setTitle] = useState(day.title);
+  const [note, setNote] = useState(day.note);
+  const [tone, setTone] = useState<DayTone>(day.tone);
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!weekday.trim() || !dateLabel.trim() || !title.trim()) return;
+    onSave({ weekday: weekday.trim(), dateLabel: dateLabel.trim(), title: title.trim(), note, tone });
+  };
+
+  return (
+    <form className="day-edit-form" onSubmit={submit}>
+      <div className="day-edit-grid">
+        <label>Wochentag<input type="text" value={weekday} onChange={(event) => setWeekday(event.target.value)} maxLength={12} disabled={pending} /></label>
+        <label>Datum-Label<input type="text" value={dateLabel} onChange={(event) => setDateLabel(event.target.value)} maxLength={24} disabled={pending} /></label>
+        <label>Farbton
+          <select value={tone} onChange={(event) => setTone(event.target.value as DayTone)} disabled={pending}>
+            {DAY_TONE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+        </label>
+        <label className="day-edit-full">Titel<input type="text" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={80} disabled={pending} /></label>
+        <label className="day-edit-full">Notiz<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={200} disabled={pending} /></label>
+      </div>
+      <div className="day-edit-actions">
+        <button type="button" className="day-edit-btn secondary" onClick={onCancel} disabled={pending}>Abbrechen</button>
+        <button type="submit" className="day-edit-btn" disabled={pending || !weekday.trim() || !dateLabel.trim() || !title.trim()}>{submitLabel}</button>
+      </div>
+    </form>
+  );
+}
+
+function TimelineEntryEditForm({
+  entry,
+  pending,
+  onSave,
+  onCancel,
+}: {
+  entry: TimelineEntry;
+  pending: boolean;
+  onSave: (fields: TimelineEntryFields) => void;
+  onCancel: () => void;
+}) {
+  const [time, setTime] = useState(entry.time);
+  const [title, setTitle] = useState(entry.title);
+  const [note, setNote] = useState(entry.note);
+  const [highlight, setHighlight] = useState(entry.highlight);
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!time.trim() || !title.trim()) return;
+    onSave({ time: time.trim(), title: title.trim(), note, highlight });
+  };
+
+  return (
+    <form className="timeline-edit-form" onSubmit={submit}>
+      <input type="text" placeholder="Uhrzeit" value={time} onChange={(event) => setTime(event.target.value)} maxLength={16} disabled={pending} />
+      <input type="text" placeholder="Titel" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={80} disabled={pending} />
+      <input type="text" placeholder="Notiz" value={note} onChange={(event) => setNote(event.target.value)} maxLength={120} disabled={pending} />
+      <label className="timeline-highlight"><input type="checkbox" checked={highlight} onChange={(event) => setHighlight(event.target.checked)} disabled={pending} /> Highlight</label>
+      <div className="timeline-edit-actions">
+        <button type="button" className="day-edit-btn secondary" onClick={onCancel} disabled={pending}>Abbrechen</button>
+        <button type="submit" className="day-edit-btn" disabled={pending || !time.trim() || !title.trim()}>Speichern</button>
+      </div>
+    </form>
+  );
+}
+
+function TimelineAddForm({
+  pending,
+  onAdd,
+  onCancel,
+}: {
+  pending: boolean;
+  onAdd: (fields: TimelineEntryFields) => void;
+  onCancel: () => void;
+}) {
+  const [time, setTime] = useState("");
+  const [title, setTitle] = useState("");
+  const [note, setNote] = useState("");
+  const [highlight, setHighlight] = useState(false);
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const trimmedTime = time.trim();
+    const trimmedTitle = title.trim();
+    if (!trimmedTime || !trimmedTitle) return;
+    onAdd({ time: trimmedTime, title: trimmedTitle, note, highlight });
+    setTime("");
+    setTitle("");
+    setNote("");
+    setHighlight(false);
+  };
+
+  return (
+    <form className="timeline-edit-form" onSubmit={submit}>
+      <input type="text" placeholder="Uhrzeit" value={time} onChange={(event) => setTime(event.target.value)} maxLength={16} disabled={pending} />
+      <input type="text" placeholder="Titel" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={80} disabled={pending} />
+      <input type="text" placeholder="Notiz" value={note} onChange={(event) => setNote(event.target.value)} maxLength={120} disabled={pending} />
+      <label className="timeline-highlight"><input type="checkbox" checked={highlight} onChange={(event) => setHighlight(event.target.checked)} disabled={pending} /> Highlight</label>
+      <div className="timeline-edit-actions">
+        <button type="button" className="day-edit-btn secondary" onClick={onCancel} disabled={pending}>Abbrechen</button>
+        <button type="submit" className="day-edit-btn" disabled={pending || !time.trim() || !title.trim()}>+ Hinzufügen</button>
+      </div>
+    </form>
   );
 }
 
