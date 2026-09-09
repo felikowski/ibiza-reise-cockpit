@@ -13,6 +13,8 @@ const MAX_BACKUPS = 20;
 const MAX_PACKING_ITEMS = 300;
 const MAX_SHOPPING_ITEMS = 300;
 const MAX_LABEL_LENGTH = 120;
+const MAX_ITINERARY_DAYS = 30;
+const MAX_TIMELINE_ENTRIES_PER_DAY = 40;
 
 const DEFAULT_PACKING_PEOPLE = [
   { id: "felix", name: "Felix" },
@@ -120,6 +122,42 @@ function migrateLegacyShopping(raw: unknown): unknown {
   };
 }
 
+/** Adds `id` fields to itinerary days and their timeline entries for older
+ * `trip.json` files that predate per-item editing (added alongside the
+ * itinerary CRUD API), so they keep working without a manual migration
+ * step. No-op once every day and entry already has an id. */
+function migrateLegacyItinerary(raw: unknown): unknown {
+  if (typeof raw !== "object" || raw === null || !("itineraryDays" in raw)) return raw;
+  const record = raw as Record<string, unknown>;
+  const days = record.itineraryDays;
+  if (!Array.isArray(days)) return raw;
+
+  const needsMigration = days.some((day) => {
+    if (typeof day !== "object" || day === null) return false;
+    const dayRecord = day as Record<string, unknown>;
+    if (typeof dayRecord.id !== "string") return true;
+    const timeline = dayRecord.timeline;
+    return Array.isArray(timeline) && timeline.some((entry) => typeof entry === "object" && entry !== null && typeof (entry as Record<string, unknown>).id !== "string");
+  });
+  if (!needsMigration) return raw;
+
+  return {
+    ...record,
+    itineraryDays: days.map((day) => {
+      const dayRecord = day as Record<string, unknown>;
+      const timeline = Array.isArray(dayRecord.timeline) ? dayRecord.timeline : [];
+      return {
+        ...dayRecord,
+        id: typeof dayRecord.id === "string" ? dayRecord.id : randomUUID(),
+        timeline: timeline.map((entry) => {
+          const entryRecord = entry as Record<string, unknown>;
+          return { ...entryRecord, id: typeof entryRecord.id === "string" ? entryRecord.id : randomUUID() };
+        }),
+      };
+    }),
+  };
+}
+
 export async function ensureSeeded(): Promise<void> {
   await mkdir(DATA_DIR, { recursive: true });
   if (!existsSync(TRIP_FILE)) {
@@ -129,7 +167,7 @@ export async function ensureSeeded(): Promise<void> {
 
 export async function readTrip(): Promise<Trip> {
   const raw = await readFile(TRIP_FILE, "utf8");
-  const result = validateTrip(migrateLegacyShopping(migrateLegacyPacking(JSON.parse(raw))));
+  const result = validateTrip(migrateLegacyItinerary(migrateLegacyShopping(migrateLegacyPacking(JSON.parse(raw)))));
   if (!result.success) {
     throw new TripValidationError(result.error);
   }
@@ -295,5 +333,152 @@ export async function updateShoppingItem(itemId: string, patch: { checked: boole
   }
 
   item.checked = patch.checked;
+  return writeTrip(trip);
+}
+
+export interface ItineraryDayFields {
+  weekday: string;
+  dateLabel: string;
+  title: string;
+  note: string;
+  tone: Trip["itineraryDays"][number]["tone"];
+}
+
+function assertItineraryDayFields(fields: Partial<ItineraryDayFields>): void {
+  if (fields.weekday !== undefined && fields.weekday.trim().length < 1) {
+    throw new TripValidationError("Wochentag darf nicht leer sein.");
+  }
+  if (fields.dateLabel !== undefined && fields.dateLabel.trim().length < 1) {
+    throw new TripValidationError("Datum-Label darf nicht leer sein.");
+  }
+  if (fields.title !== undefined && fields.title.trim().length < 1) {
+    throw new TripValidationError("Titel darf nicht leer sein.");
+  }
+}
+
+export async function addItineraryDay(fields: ItineraryDayFields): Promise<Trip> {
+  assertItineraryDayFields(fields);
+
+  const trip = await readTrip();
+  if (trip.itineraryDays.length >= MAX_ITINERARY_DAYS) {
+    throw new TripValidationError(`Der Reiseplan hat das Limit von ${MAX_ITINERARY_DAYS} Tagen erreicht.`);
+  }
+
+  trip.itineraryDays.push({
+    id: randomUUID(),
+    weekday: fields.weekday.trim(),
+    dateLabel: fields.dateLabel.trim(),
+    title: fields.title.trim(),
+    note: fields.note.trim(),
+    tone: fields.tone,
+    timeline: [],
+  });
+  return writeTrip(trip);
+}
+
+export async function updateItineraryDay(dayId: string, patch: Partial<ItineraryDayFields>): Promise<Trip> {
+  assertItineraryDayFields(patch);
+
+  const trip = await readTrip();
+  const day = trip.itineraryDays.find((candidate) => candidate.id === dayId);
+  if (!day) {
+    throw new ItemNotFoundError(`Reisetag nicht gefunden: ${dayId}`);
+  }
+
+  if (patch.weekday !== undefined) day.weekday = patch.weekday.trim();
+  if (patch.dateLabel !== undefined) day.dateLabel = patch.dateLabel.trim();
+  if (patch.title !== undefined) day.title = patch.title.trim();
+  if (patch.note !== undefined) day.note = patch.note.trim();
+  if (patch.tone !== undefined) day.tone = patch.tone;
+
+  return writeTrip(trip);
+}
+
+export async function removeItineraryDay(dayId: string): Promise<Trip> {
+  const trip = await readTrip();
+  if (trip.itineraryDays.length <= 1) {
+    throw new TripValidationError("Der letzte Reisetag kann nicht entfernt werden.");
+  }
+  const index = trip.itineraryDays.findIndex((day) => day.id === dayId);
+  if (index < 0) {
+    throw new ItemNotFoundError(`Reisetag nicht gefunden: ${dayId}`);
+  }
+  trip.itineraryDays.splice(index, 1);
+  return writeTrip(trip);
+}
+
+export interface TimelineEntryFields {
+  time: string;
+  title: string;
+  note: string;
+  highlight: boolean;
+}
+
+function assertTimelineEntryFields(fields: Partial<TimelineEntryFields>): void {
+  if (fields.time !== undefined && fields.time.trim().length < 1) {
+    throw new TripValidationError("Uhrzeit darf nicht leer sein.");
+  }
+  if (fields.title !== undefined && fields.title.trim().length < 1) {
+    throw new TripValidationError("Titel darf nicht leer sein.");
+  }
+}
+
+export async function addTimelineEntry(dayId: string, fields: TimelineEntryFields): Promise<Trip> {
+  assertTimelineEntryFields(fields);
+
+  const trip = await readTrip();
+  const day = trip.itineraryDays.find((candidate) => candidate.id === dayId);
+  if (!day) {
+    throw new ItemNotFoundError(`Reisetag nicht gefunden: ${dayId}`);
+  }
+  if (day.timeline.length >= MAX_TIMELINE_ENTRIES_PER_DAY) {
+    throw new TripValidationError(`Der Tagesablauf hat das Limit von ${MAX_TIMELINE_ENTRIES_PER_DAY} Einträgen erreicht.`);
+  }
+
+  day.timeline.push({
+    id: randomUUID(),
+    time: fields.time.trim(),
+    title: fields.title.trim(),
+    note: fields.note.trim(),
+    highlight: fields.highlight,
+  });
+  return writeTrip(trip);
+}
+
+export async function updateTimelineEntry(entryId: string, patch: Partial<TimelineEntryFields>): Promise<Trip> {
+  assertTimelineEntryFields(patch);
+
+  const trip = await readTrip();
+  let entry: Trip["itineraryDays"][number]["timeline"][number] | undefined;
+  for (const day of trip.itineraryDays) {
+    entry = day.timeline.find((candidate) => candidate.id === entryId);
+    if (entry) break;
+  }
+  if (!entry) {
+    throw new ItemNotFoundError(`Tagesablauf-Eintrag nicht gefunden: ${entryId}`);
+  }
+
+  if (patch.time !== undefined) entry.time = patch.time.trim();
+  if (patch.title !== undefined) entry.title = patch.title.trim();
+  if (patch.note !== undefined) entry.note = patch.note.trim();
+  if (patch.highlight !== undefined) entry.highlight = patch.highlight;
+
+  return writeTrip(trip);
+}
+
+export async function removeTimelineEntry(entryId: string): Promise<Trip> {
+  const trip = await readTrip();
+  let found = false;
+  for (const day of trip.itineraryDays) {
+    const index = day.timeline.findIndex((entry) => entry.id === entryId);
+    if (index >= 0) {
+      day.timeline.splice(index, 1);
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    throw new ItemNotFoundError(`Tagesablauf-Eintrag nicht gefunden: ${entryId}`);
+  }
   return writeTrip(trip);
 }

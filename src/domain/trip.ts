@@ -37,6 +37,7 @@ export interface RentalCar {
 }
 
 export interface TimelineEntry {
+  id: string;
   time: string;
   title: string;
   note: string;
@@ -44,6 +45,7 @@ export interface TimelineEntry {
 }
 
 export interface ItineraryDay {
+  id: string;
   weekday: string;
   dateLabel: string;
   title: string;

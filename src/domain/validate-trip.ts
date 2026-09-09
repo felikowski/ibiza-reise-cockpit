@@ -40,6 +40,7 @@ const rentalCarSchema = z.object({
 });
 
 const timelineEntrySchema = z.object({
+  id: z.string().min(1),
   time: z.string().min(1),
   title: z.string().min(1),
   note: z.string(),
@@ -47,12 +48,13 @@ const timelineEntrySchema = z.object({
 });
 
 const itineraryDaySchema = z.object({
+  id: z.string().min(1),
   weekday: z.string().min(1),
   dateLabel: z.string().min(1),
   title: z.string().min(1),
   note: z.string(),
   tone: dayToneSchema,
-  timeline: z.array(timelineEntrySchema).min(1),
+  timeline: z.array(timelineEntrySchema),
 });
 
 const placeSchema = z.object({
