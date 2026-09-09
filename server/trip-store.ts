@@ -11,6 +11,7 @@ const TRIP_FILE = path.join(DATA_DIR, "trip.json");
 const BACKUP_DIR = path.join(DATA_DIR, "backups");
 const MAX_BACKUPS = 20;
 const MAX_PACKING_ITEMS = 300;
+const MAX_SHOPPING_ITEMS = 300;
 const MAX_LABEL_LENGTH = 120;
 
 const DEFAULT_PACKING_PEOPLE = [
@@ -19,8 +20,23 @@ const DEFAULT_PACKING_PEOPLE = [
   { id: "lordBuckethelm", name: "Lord Buckethelm" },
 ];
 
+/** Seeded from a shared kaufDA shopping list, grouped to match the aisle
+ * layout of a typical Mercadona (the supermarket chain nearest the finca). */
+const DEFAULT_SHOPPING_CATEGORIES: { title: string; items: string[] }[] = [
+  { title: "Obst & Gemüse", items: ["Wassermelone", "Knoblauch", "Zwiebeln"] },
+  { title: "Brot & Backwaren", items: ["Brot", "Aufbackbrötchen"] },
+  { title: "Wurst, Käse & Feinkost", items: ["Oliven", "Wurst", "Würstchen"] },
+  { title: "Milchprodukte & Eier", items: ["Butter", "Milch", "Eier", "Käse", "Parmesan"] },
+  { title: "Tiefkühlkost", items: ["Burger"] },
+  { title: "Konserven, Nudeln & Gewürze", items: ["Passierte Tomaten", "Nudeln", "Zucker", "Tomatensoße"] },
+  { title: "Süßes & Snacks", items: ["Chips"] },
+  { title: "Getränke", items: ["Wasser", "Orangensaft", "Cola", "Rum", "Wodka", "Bier"] },
+  { title: "Kaffee & Tee", items: ["Kaffee"] },
+  { title: "Sonstiges", items: ["Einweggrill"] },
+];
+
 export class TripValidationError extends Error {}
-export class PackingNotFoundError extends Error {}
+export class ItemNotFoundError extends Error {}
 
 /** Upgrades older packing shapes to the current one, so existing `trip.json`
  * files (local or on the VPS) keep working without a manual migration step:
@@ -84,6 +100,26 @@ function migrateLegacyPacking(raw: unknown): unknown {
   };
 }
 
+/** Adds a default `shopping` section (seeded from a shared kaufDA list) to
+ * older `trip.json` files that predate the shopping-list feature, so they
+ * keep working without a manual migration step. No-op once a file already
+ * has a `shopping` field. */
+function migrateLegacyShopping(raw: unknown): unknown {
+  if (typeof raw !== "object" || raw === null) return raw;
+  const record = raw as Record<string, unknown>;
+  if (typeof record.shopping === "object" && record.shopping !== null) return raw;
+
+  return {
+    ...record,
+    shopping: {
+      categories: DEFAULT_SHOPPING_CATEGORIES.map((category) => ({
+        title: category.title,
+        items: category.items.map((label) => ({ id: randomUUID(), label, checked: false })),
+      })),
+    },
+  };
+}
+
 export async function ensureSeeded(): Promise<void> {
   await mkdir(DATA_DIR, { recursive: true });
   if (!existsSync(TRIP_FILE)) {
@@ -93,7 +129,7 @@ export async function ensureSeeded(): Promise<void> {
 
 export async function readTrip(): Promise<Trip> {
   const raw = await readFile(TRIP_FILE, "utf8");
-  const result = validateTrip(migrateLegacyPacking(JSON.parse(raw)));
+  const result = validateTrip(migrateLegacyShopping(migrateLegacyPacking(JSON.parse(raw))));
   if (!result.success) {
     throw new TripValidationError(result.error);
   }
@@ -157,7 +193,7 @@ export async function addPackingItem(
 
   const group = trip.packing.groups.find((candidate) => candidate.title === groupTitle);
   if (!group) {
-    throw new PackingNotFoundError(`Gruppe nicht gefunden: ${groupTitle}`);
+    throw new ItemNotFoundError(`Gruppe nicht gefunden: ${groupTitle}`);
   }
 
   group.items.push({ id: randomUUID(), label: trimmed, assignedTo, scope, checked: false });
@@ -176,7 +212,7 @@ export async function removePackingItem(itemId: string): Promise<Trip> {
     }
   }
   if (!found) {
-    throw new PackingNotFoundError(`Packlisten-Punkt nicht gefunden: ${itemId}`);
+    throw new ItemNotFoundError(`Packlisten-Punkt nicht gefunden: ${itemId}`);
   }
   return writeTrip(trip);
 }
@@ -196,11 +232,68 @@ export async function updatePackingItem(
     if (item) break;
   }
   if (!item) {
-    throw new PackingNotFoundError(`Packlisten-Punkt nicht gefunden: ${itemId}`);
+    throw new ItemNotFoundError(`Packlisten-Punkt nicht gefunden: ${itemId}`);
   }
 
   if (patch.checked !== undefined) item.checked = patch.checked;
   if (patch.assignedTo !== undefined) item.assignedTo = patch.assignedTo;
 
+  return writeTrip(trip);
+}
+
+function totalShoppingItems(trip: Trip): number {
+  return trip.shopping.categories.reduce((sum, category) => sum + category.items.length, 0);
+}
+
+export async function addShoppingItem(categoryTitle: string, label: string): Promise<Trip> {
+  const trimmed = label.trim();
+  if (trimmed.length < 1 || trimmed.length > MAX_LABEL_LENGTH) {
+    throw new TripValidationError(`Bezeichnung muss 1-${MAX_LABEL_LENGTH} Zeichen lang sein.`);
+  }
+
+  const trip = await readTrip();
+  if (totalShoppingItems(trip) >= MAX_SHOPPING_ITEMS) {
+    throw new TripValidationError(`Die Einkaufsliste hat das Limit von ${MAX_SHOPPING_ITEMS} Punkten erreicht.`);
+  }
+
+  const category = trip.shopping.categories.find((candidate) => candidate.title === categoryTitle);
+  if (!category) {
+    throw new ItemNotFoundError(`Kategorie nicht gefunden: ${categoryTitle}`);
+  }
+
+  category.items.push({ id: randomUUID(), label: trimmed, checked: false });
+  return writeTrip(trip);
+}
+
+export async function removeShoppingItem(itemId: string): Promise<Trip> {
+  const trip = await readTrip();
+  let found = false;
+  for (const category of trip.shopping.categories) {
+    const index = category.items.findIndex((item) => item.id === itemId);
+    if (index >= 0) {
+      category.items.splice(index, 1);
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    throw new ItemNotFoundError(`Einkaufslisten-Punkt nicht gefunden: ${itemId}`);
+  }
+  return writeTrip(trip);
+}
+
+export async function updateShoppingItem(itemId: string, patch: { checked: boolean }): Promise<Trip> {
+  const trip = await readTrip();
+
+  let item: Trip["shopping"]["categories"][number]["items"][number] | undefined;
+  for (const category of trip.shopping.categories) {
+    item = category.items.find((candidate) => candidate.id === itemId);
+    if (item) break;
+  }
+  if (!item) {
+    throw new ItemNotFoundError(`Einkaufslisten-Punkt nicht gefunden: ${itemId}`);
+  }
+
+  item.checked = patch.checked;
   return writeTrip(trip);
 }

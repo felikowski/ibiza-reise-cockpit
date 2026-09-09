@@ -98,6 +98,21 @@ export interface Packing {
   groups: PackingGroup[];
 }
 
+export interface ShoppingItem {
+  id: string;
+  label: string;
+  checked: boolean;
+}
+
+export interface ShoppingCategory {
+  title: string;
+  items: ShoppingItem[];
+}
+
+export interface Shopping {
+  categories: ShoppingCategory[];
+}
+
 export interface DocumentItem {
   title: string;
   meta: string;
@@ -154,6 +169,7 @@ export interface Trip {
   places: Place[];
   budget: Budget;
   packing: Packing;
+  shopping: Shopping;
   documents: DocumentItem[];
   emergencyContacts: EmergencyContact[];
   practicalFacts: PracticalFact[];
