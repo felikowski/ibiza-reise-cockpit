@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PackingItem, Trip } from "@/src/domain/trip";
+import type { PackingItem, ShoppingItem, Trip } from "@/src/domain/trip";
 import {
   budgetGrandTotal,
   confirmedBookings,
@@ -16,6 +16,7 @@ import {
   perPersonShare,
   placeTypes,
   readinessPercent,
+  shoppingTotals,
   berlinComparisonDays,
   tripDates,
 } from "@/src/domain/derive-trip";
@@ -25,7 +26,7 @@ import { describeWeatherCode } from "@/src/domain/weather-codes";
 import DiscoverMap, { googleMapsUrl } from "./discover-map";
 import type { TabId, WeatherState } from "./app-shell";
 
-async function submitPackingRequest(url: string, method: string, body?: unknown): Promise<Trip> {
+async function submitTripRequest(url: string, method: string, body?: unknown): Promise<Trip> {
   const response = await fetch(url, {
     method,
     headers: body ? { "Content-Type": "application/json" } : undefined,
@@ -44,15 +45,27 @@ function addPackingItem(
   scope: "personal" | "shared",
   assignedTo: string | null,
 ): Promise<Trip> {
-  return submitPackingRequest("/api/packing/items", "POST", { groupTitle, label, scope, assignedTo });
+  return submitTripRequest("/api/packing/items", "POST", { groupTitle, label, scope, assignedTo });
 }
 
 function patchPackingItem(itemId: string, patch: { checked?: boolean; assignedTo?: string | null }): Promise<Trip> {
-  return submitPackingRequest(`/api/packing/items/${itemId}`, "PATCH", patch);
+  return submitTripRequest(`/api/packing/items/${itemId}`, "PATCH", patch);
 }
 
 function removePackingItem(itemId: string): Promise<Trip> {
-  return submitPackingRequest(`/api/packing/items/${itemId}`, "DELETE");
+  return submitTripRequest(`/api/packing/items/${itemId}`, "DELETE");
+}
+
+function addShoppingItem(categoryTitle: string, label: string): Promise<Trip> {
+  return submitTripRequest("/api/shopping/items", "POST", { categoryTitle, label });
+}
+
+function patchShoppingItem(itemId: string, patch: { checked: boolean }): Promise<Trip> {
+  return submitTripRequest(`/api/shopping/items/${itemId}`, "PATCH", patch);
+}
+
+function removeShoppingItem(itemId: string): Promise<Trip> {
+  return submitTripRequest(`/api/shopping/items/${itemId}`, "DELETE");
 }
 
 export function Overview({
@@ -681,6 +694,103 @@ function PackingAddForm({
 
 function initials(name: string): string {
   return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+}
+
+export function Shopping({ trip, onTripChange }: { trip: Trip; onTripChange: (trip: Trip) => void }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const shoppingStats = shoppingTotals(trip.shopping);
+  const categoryTitles = trip.shopping.categories.map((category) => category.title);
+  const categoriesWithItems = trip.shopping.categories.filter((category) => category.items.length > 0);
+
+  const run = async (action: () => Promise<Trip>) => {
+    setPending(true);
+    setError(null);
+    try {
+      onTripChange(await action());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const toggleChecked = (item: ShoppingItem) => run(() => patchShoppingItem(item.id, { checked: !item.checked }));
+  const removeItem = (item: ShoppingItem) => run(() => removeShoppingItem(item.id));
+  const addItem = (categoryTitle: string, label: string) => run(() => addShoppingItem(categoryTitle, label));
+
+  return (
+    <section className="page inner-page">
+      <PageIntro eyebrow="EINKAUFSLISTE" title="Alles im Wagen, nichts vergessen." copy="Der gemeinsame Großeinkauf für die Finca — sortiert nach Abteilung." />
+      <div className="packing-head card">
+        <div className="packing-ring" style={{ "--progress": `${shoppingStats.percent * 3.6}deg` } as React.CSSProperties}>
+          <span>{shoppingStats.percent}<small>%</small></span>
+        </div>
+        <div>
+          <span>Dein Fortschritt</span>
+          <h2>{shoppingStats.checkedCount} von {shoppingStats.total} im Wagen</h2>
+          <p>{shoppingStats.total - shoppingStats.checkedCount === 0 ? "Fertig — ab zur Kasse." : `Noch ${shoppingStats.total - shoppingStats.checkedCount} Dinge auf der Liste.`}</p>
+        </div>
+      </div>
+
+      {error && <p className="packing-error">{error}</p>}
+
+      {categoriesWithItems.length === 0 ? (
+        <p className="packing-empty card">Noch nichts auf der Liste. Füge unten den ersten Punkt hinzu.</p>
+      ) : (
+        <div className="packing-grid">
+          {categoriesWithItems.map((category) => (
+            <section className="card packing-group" key={category.title}>
+              <h2>{category.title}</h2>
+              <div>
+                {category.items.map((item) => (
+                  <label key={item.id} className={item.checked ? "packed" : ""}>
+                    <input type="checkbox" checked={item.checked} onChange={() => toggleChecked(item)} disabled={pending} />
+                    <i>{item.checked ? "✓" : ""}</i>
+                    <span>{item.label}</span>
+                    <button type="button" className="packing-remove" aria-label={`${item.label} entfernen`} onClick={() => removeItem(item)} disabled={pending}>×</button>
+                  </label>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+
+      <ShoppingAddForm categoryTitles={categoryTitles} pending={pending} onAdd={addItem} />
+    </section>
+  );
+}
+
+function ShoppingAddForm({
+  categoryTitles,
+  pending,
+  onAdd,
+}: {
+  categoryTitles: string[];
+  pending: boolean;
+  onAdd: (categoryTitle: string, label: string) => void;
+}) {
+  const [label, setLabel] = useState("");
+  const [category, setCategory] = useState(categoryTitles[0] ?? "");
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const trimmed = label.trim();
+    if (!trimmed || !category) return;
+    onAdd(category, trimmed);
+    setLabel("");
+  };
+
+  return (
+    <form className="packing-add card" onSubmit={submit}>
+      <input type="text" placeholder="Neuer Punkt …" value={label} onChange={(event) => setLabel(event.target.value)} maxLength={120} disabled={pending} />
+      <select value={category} onChange={(event) => setCategory(event.target.value)} disabled={pending}>
+        {categoryTitles.map((title) => <option key={title} value={title}>{title}</option>)}
+      </select>
+      <button type="submit" disabled={pending || !label.trim()}>+ Hinzufügen</button>
+    </form>
+  );
 }
 
 export function Documents({ trip }: { trip: Trip }) {

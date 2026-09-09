@@ -257,6 +257,87 @@
       }
     ]
   },
+  "shopping": {
+    "categories": [
+      {
+        "title": "Obst & Gemüse",
+        "items": [
+          { "id": "einkauf-wassermelone", "label": "Wassermelone", "checked": false },
+          { "id": "einkauf-knoblauch", "label": "Knoblauch", "checked": false },
+          { "id": "einkauf-zwiebeln", "label": "Zwiebeln", "checked": false }
+        ]
+      },
+      {
+        "title": "Brot & Backwaren",
+        "items": [
+          { "id": "einkauf-brot", "label": "Brot", "checked": false },
+          { "id": "einkauf-aufbackbroetchen", "label": "Aufbackbrötchen", "checked": false }
+        ]
+      },
+      {
+        "title": "Wurst, Käse & Feinkost",
+        "items": [
+          { "id": "einkauf-oliven", "label": "Oliven", "checked": false },
+          { "id": "einkauf-wurst", "label": "Wurst", "checked": false },
+          { "id": "einkauf-wuerstchen", "label": "Würstchen", "checked": false }
+        ]
+      },
+      {
+        "title": "Milchprodukte & Eier",
+        "items": [
+          { "id": "einkauf-butter", "label": "Butter", "checked": false },
+          { "id": "einkauf-milch", "label": "Milch", "checked": false },
+          { "id": "einkauf-eier", "label": "Eier", "checked": false },
+          { "id": "einkauf-kaese", "label": "Käse", "checked": false },
+          { "id": "einkauf-parmesan", "label": "Parmesan", "checked": false }
+        ]
+      },
+      {
+        "title": "Tiefkühlkost",
+        "items": [
+          { "id": "einkauf-burger", "label": "Burger", "checked": false }
+        ]
+      },
+      {
+        "title": "Konserven, Nudeln & Gewürze",
+        "items": [
+          { "id": "einkauf-tomaten-passiert", "label": "Passierte Tomaten", "checked": false },
+          { "id": "einkauf-nudeln", "label": "Nudeln", "checked": false },
+          { "id": "einkauf-zucker", "label": "Zucker", "checked": false },
+          { "id": "einkauf-tomatensosse", "label": "Tomatensoße", "checked": false }
+        ]
+      },
+      {
+        "title": "Süßes & Snacks",
+        "items": [
+          { "id": "einkauf-chips", "label": "Chips", "checked": false }
+        ]
+      },
+      {
+        "title": "Getränke",
+        "items": [
+          { "id": "einkauf-wasser", "label": "Wasser", "checked": false },
+          { "id": "einkauf-orangensaft", "label": "Orangensaft", "checked": false },
+          { "id": "einkauf-cola", "label": "Cola", "checked": false },
+          { "id": "einkauf-rum", "label": "Rum", "checked": false },
+          { "id": "einkauf-wodka", "label": "Wodka", "checked": false },
+          { "id": "einkauf-bier", "label": "Bier", "checked": false }
+        ]
+      },
+      {
+        "title": "Kaffee & Tee",
+        "items": [
+          { "id": "einkauf-kaffee", "label": "Kaffee", "checked": false }
+        ]
+      },
+      {
+        "title": "Sonstiges",
+        "items": [
+          { "id": "einkauf-einweggrill", "label": "Einweggrill", "checked": false }
+        ]
+      }
+    ]
+  },
   "documents": [
     { "title": "Personalausweis", "meta": "Gültig bis 03/2031", "status": "Geprüft", "symbol": "ID" },
     { "title": "Führerschein", "meta": "Für Mietwagen benötigt", "status": "Geprüft", "symbol": "DL" },

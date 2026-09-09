@@ -1,5 +1,5 @@
 import { addDays, enumerateDates, formatISODate, parseISODate } from "./dates";
-import type { Budget, DocumentItem, Packing, Place, Trip, TripMeta } from "./trip";
+import type { Budget, DocumentItem, Packing, Place, Shopping, Trip, TripMeta } from "./trip";
 
 export const BUDGET_SHARE_COUNT = 3;
 
@@ -41,6 +41,14 @@ export function packingTotals(packing: Packing) {
   const packedCount = items.filter((item) => item.checked).length;
   const percent = total > 0 ? Math.round((packedCount / total) * 100) : 0;
   return { total, packedCount, percent };
+}
+
+export function shoppingTotals(shopping: Shopping) {
+  const items = shopping.categories.flatMap((category) => category.items);
+  const total = items.length;
+  const checkedCount = items.filter((item) => item.checked).length;
+  const percent = total > 0 ? Math.round((checkedCount / total) * 100) : 0;
+  return { total, checkedCount, percent };
 }
 
 export function confirmedBookings(trip: Trip): { confirmed: number; total: number } {

@@ -323,6 +323,27 @@ export const adminPageHtml = `<!doctype html>
     return html;
   }
 
+  function renderShoppingSection() {
+    var shopping = data.shopping;
+    var shoppingItemFields = [
+      { key: "label", label: "Bezeichnung", type: "text" },
+      { key: "checked", label: "Im Wagen", type: "checkbox" },
+    ];
+
+    var html = '<h2 class="section-title">Einkaufsliste</h2><p class="section-hint">Kategorien mit Punkten, angelehnt an die Abteilungen eines Supermarkts. Neue Punkte bekommen automatisch eine ID.</p>';
+    html += shopping.categories.map(function (category, cIndex) {
+      var categoryPath = ["shopping", "categories", cIndex];
+      return '<div class="subcard">' +
+        '<div class="subcard-head"><h3>' + esc(category.title || "Kategorie " + (cIndex + 1)) + '</h3><button type="button" class="danger" data-action="remove-row" data-list-path=\\'' + pathAttr(["shopping", "categories"]) + '\\' data-index="' + cIndex + '">Kategorie entfernen</button></div>' +
+        objectFieldsHtml(categoryPath, [{ key: "title", label: "Kategorietitel", type: "text" }], category) +
+        '<h4 class="subcard-subtitle">Punkte</h4>' +
+        listSectionHtml(categoryPath.concat("items"), shoppingItemFields, category.items, "Punkt") +
+        "</div>";
+    }).join("");
+    html += '<button type="button" class="secondary list-add" data-action="add-row" data-list-path=\\'' + pathAttr(["shopping", "categories"]) + "'>+ Kategorie hinzufügen</button>";
+    return html;
+  }
+
   function renderJsonSection() {
     return '<h2 class="section-title">Rohdaten (JSON)</h2>' +
       '<p class="section-hint">Fallback zum Exportieren oder für Detail-Anpassungen. „Übernehmen“ ersetzt die aktuellen Formulardaten im Speicher — erst der „Speichern“-Button oben schreibt sie auf den Server.</p>' +
@@ -339,6 +360,7 @@ export const adminPageHtml = `<!doctype html>
     { id: "places", label: "Orte", render: function () { return renderListOnlySection(["places"], placeFields, "Orte", "", "Ort"); } },
     { id: "budget", label: "Budget", render: renderBudgetSection },
     { id: "packing", label: "Packliste", render: renderPackingSection },
+    { id: "shopping", label: "Einkaufsliste", render: renderShoppingSection },
     { id: "documents", label: "Dokumente", render: function () { return renderListOnlySection(["documents"], documentFields, "Dokumente", "", "Dokument"); } },
     { id: "emergencyContacts", label: "Notfallkontakte", render: function () { return renderListOnlySection(["emergencyContacts"], emergencyContactFields, "Notfallkontakte", "", "Kontakt"); } },
     { id: "practicalFacts", label: "Praktisches", render: function () { return renderListOnlySection(["practicalFacts"], practicalFactFields, "Praktisches", "", "Eintrag"); } },
@@ -348,20 +370,30 @@ export const adminPageHtml = `<!doctype html>
   ];
 
   function listDefaultFor(path) {
-    var key = path[path.length - 1];
+    // Full non-numeric path (e.g. "packing.groups.items") rather than just the
+    // last segment, since sibling lists like budget.categories and
+    // shopping.categories otherwise collide on a bare "categories" key.
+    var key = path.filter(function (segment) { return typeof segment !== "number"; }).join(".");
+    function newId() {
+      return window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : "item-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+    }
     var generators = {
       itineraryDays: function () { return { weekday: "", dateLabel: "", title: "", note: "", tone: "sun", timeline: [] }; },
-      timeline: function () { return { time: "", title: "", note: "", highlight: false }; },
+      "itineraryDays.timeline": function () { return { time: "", title: "", note: "", highlight: false }; },
       places: function () { return { name: "", type: "", area: "", note: "", color: "" }; },
-      categories: function () { return { name: "", amount: 0, color: "" }; },
+      "budget.categories": function () { return { name: "", amount: 0, color: "" }; },
       documents: function () { return { title: "", meta: "", status: "", symbol: "" }; },
       emergencyContacts: function () { return { label: "", phone: "" }; },
       practicalFacts: function () { return { label: "", value: "" }; },
-      groups: function () { return { title: "Neue Gruppe", items: [] }; },
-      items: function () {
-        return { id: window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : "item-" + Date.now() + "-" + Math.random().toString(36).slice(2), label: "", assignedTo: null, checked: false };
+      "packing.groups": function () { return { title: "Neue Gruppe", items: [] }; },
+      "packing.groups.items": function () {
+        return { id: newId(), label: "", assignedTo: null, scope: "shared", checked: false };
       },
-      people: function () { return { id: "", name: "" }; },
+      "packing.people": function () { return { id: "", name: "" }; },
+      "shopping.categories": function () { return { title: "Neue Kategorie", items: [] }; },
+      "shopping.categories.items": function () {
+        return { id: newId(), label: "", checked: false };
+      },
     };
     var gen = generators[key];
     return gen ? gen() : {};

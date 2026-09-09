@@ -15,6 +15,7 @@ export type TabId =
   | "discover"
   | "budget"
   | "packing"
+  | "shopping"
   | "documents"
   | "weather";
 
@@ -26,6 +27,7 @@ export const tabs: { id: TabId; label: string; symbol: string; path: string }[] 
   { id: "weather", label: "Wetter", symbol: "☀", path: "/wetter" },
   { id: "budget", label: "Budget", symbol: "€", path: "/budget" },
   { id: "packing", label: "Packen", symbol: "✓", path: "/packen" },
+  { id: "shopping", label: "Einkaufsliste", symbol: "☰", path: "/einkaufsliste" },
   { id: "documents", label: "Dokumente", symbol: "▤", path: "/dokumente" },
 ];
 

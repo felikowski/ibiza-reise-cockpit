@@ -2,12 +2,15 @@ import express, { type NextFunction, type Request, type Response } from "express
 import { adminPageHtml } from "./admin-page";
 import {
   addPackingItem,
+  addShoppingItem,
   ensureSeeded,
-  PackingNotFoundError,
+  ItemNotFoundError,
   readTrip,
   removePackingItem,
+  removeShoppingItem,
   TripValidationError,
   updatePackingItem,
+  updateShoppingItem,
   writeTrip,
 } from "./trip-store";
 
@@ -55,6 +58,7 @@ async function main() {
   });
 
   const packingJson = express.json({ limit: "100kb" });
+  const shoppingJson = express.json({ limit: "100kb" });
 
   app.post("/api/packing/items", packingJson, async (req, res) => {
     try {
@@ -70,7 +74,7 @@ async function main() {
       const trip = await addPackingItem(groupTitle, label, scope, typeof assignedTo === "string" ? assignedTo : null);
       res.json({ ok: true, trip });
     } catch (error) {
-      if (error instanceof PackingNotFoundError) {
+      if (error instanceof ItemNotFoundError) {
         res.status(404).json({ error: error.message });
         return;
       }
@@ -103,7 +107,7 @@ async function main() {
       const trip = await updatePackingItem(req.params.id, patch);
       res.json({ ok: true, trip });
     } catch (error) {
-      if (error instanceof PackingNotFoundError) {
+      if (error instanceof ItemNotFoundError) {
         res.status(404).json({ error: error.message });
         return;
       }
@@ -120,7 +124,64 @@ async function main() {
       const trip = await removePackingItem(req.params.id);
       res.json({ ok: true, trip });
     } catch (error) {
-      if (error instanceof PackingNotFoundError) {
+      if (error instanceof ItemNotFoundError) {
+        res.status(404).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  app.post("/api/shopping/items", shoppingJson, async (req, res) => {
+    try {
+      const { categoryTitle, label } = req.body ?? {};
+      if (typeof categoryTitle !== "string" || typeof label !== "string") {
+        res.status(400).json({ error: "categoryTitle und label sind erforderlich." });
+        return;
+      }
+      const trip = await addShoppingItem(categoryTitle, label);
+      res.json({ ok: true, trip });
+    } catch (error) {
+      if (error instanceof ItemNotFoundError) {
+        res.status(404).json({ error: error.message });
+        return;
+      }
+      if (error instanceof TripValidationError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  app.patch("/api/shopping/items/:id", shoppingJson, async (req, res) => {
+    try {
+      const { checked } = req.body ?? {};
+      if (typeof checked !== "boolean") {
+        res.status(400).json({ error: "checked muss ein boolean sein." });
+        return;
+      }
+      const trip = await updateShoppingItem(req.params.id, { checked });
+      res.json({ ok: true, trip });
+    } catch (error) {
+      if (error instanceof ItemNotFoundError) {
+        res.status(404).json({ error: error.message });
+        return;
+      }
+      if (error instanceof TripValidationError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  app.delete("/api/shopping/items/:id", async (req, res) => {
+    try {
+      const trip = await removeShoppingItem(req.params.id);
+      res.json({ ok: true, trip });
+    } catch (error) {
+      if (error instanceof ItemNotFoundError) {
         res.status(404).json({ error: error.message });
         return;
       }

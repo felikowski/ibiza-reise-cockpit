@@ -101,6 +101,21 @@ const packingSchema = z.object({
   groups: z.array(packingGroupSchema).min(1),
 });
 
+const shoppingItemSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1).max(120),
+  checked: z.boolean(),
+});
+
+const shoppingCategorySchema = z.object({
+  title: z.string().min(1),
+  items: z.array(shoppingItemSchema),
+});
+
+const shoppingSchema = z.object({
+  categories: z.array(shoppingCategorySchema).min(1),
+});
+
 const documentItemSchema = z.object({
   title: z.string().min(1),
   meta: z.string(),
@@ -157,6 +172,7 @@ export const tripSchema = z.object({
   places: z.array(placeSchema),
   budget: budgetSchema,
   packing: packingSchema,
+  shopping: shoppingSchema,
   documents: z.array(documentItemSchema),
   emergencyContacts: z.array(emergencyContactSchema),
   practicalFacts: z.array(practicalFactSchema),
