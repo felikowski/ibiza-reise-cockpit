@@ -130,6 +130,28 @@ function removePlace(placeId: string): Promise<Trip> {
   return submitTripRequest(`/api/places/${placeId}`, "DELETE");
 }
 
+interface PlaceLinkSuggestion {
+  name: string;
+  type: string;
+  area: string;
+  lat: number;
+  lon: number;
+  image: string | null;
+}
+
+async function resolvePlaceLink(url: string): Promise<PlaceLinkSuggestion> {
+  const response = await fetch("/api/places/resolve-link", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error ?? `Server antwortete mit ${response.status}`);
+  }
+  return payload.suggestion as PlaceLinkSuggestion;
+}
+
 export function Overview({
   trip,
   weather,
@@ -861,6 +883,29 @@ function PlaceEditForm({
   const [lat, setLat] = useState(place.lat !== undefined ? String(place.lat) : "");
   const [lon, setLon] = useState(place.lon !== undefined ? String(place.lon) : "");
   const [image, setImage] = useState(place.image ?? "");
+  const [mapsLink, setMapsLink] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+
+  const handleResolve = async () => {
+    const trimmedLink = mapsLink.trim();
+    if (!trimmedLink) return;
+    setResolving(true);
+    setResolveError(null);
+    try {
+      const suggestion = await resolvePlaceLink(trimmedLink);
+      if (suggestion.name) setName(suggestion.name);
+      if (suggestion.type) setType(suggestion.type);
+      if (suggestion.area) setArea(suggestion.area);
+      setLat(String(suggestion.lat));
+      setLon(String(suggestion.lon));
+      if (suggestion.image) setImage(suggestion.image);
+    } catch (err) {
+      setResolveError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setResolving(false);
+    }
+  };
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -883,6 +928,19 @@ function PlaceEditForm({
   return (
     <form className="card place-edit-form" onSubmit={submit}>
       {heading && <h2 className="day-edit-heading">{heading}</h2>}
+      <div className="place-link-row">
+        <input
+          type="url"
+          placeholder="Google-Maps-Link einfügen …"
+          value={mapsLink}
+          onChange={(event) => setMapsLink(event.target.value)}
+          disabled={pending || resolving}
+        />
+        <button type="button" className="day-edit-btn secondary" onClick={handleResolve} disabled={pending || resolving || !mapsLink.trim()}>
+          {resolving ? "Lädt …" : "Angaben laden"}
+        </button>
+      </div>
+      {resolveError && <p className="packing-error">{resolveError}</p>}
       <div className="day-edit-grid">
         <label>Name<input type="text" value={name} onChange={(event) => setName(event.target.value)} maxLength={80} disabled={pending} /></label>
         <label>Kategorie<input type="text" value={type} onChange={(event) => setType(event.target.value)} maxLength={40} placeholder="z. B. Bar, Strand …" disabled={pending} /></label>

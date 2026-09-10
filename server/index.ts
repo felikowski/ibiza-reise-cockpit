@@ -1,5 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import { adminPageHtml } from "./admin-page";
+import { PlacesApiError, resolveGoogleMapsLink } from "./places-client";
 import {
   addItineraryDay,
   addPackingItem,
@@ -8,6 +9,8 @@ import {
   addTimelineEntry,
   ensureSeeded,
   ItemNotFoundError,
+  PLACE_PHOTOS_DIR,
+  PLACE_PHOTOS_PUBLIC_PATH,
   readTrip,
   removeItineraryDay,
   removePackingItem,
@@ -27,6 +30,22 @@ const PORT = Number(process.env.PORT ?? 4000);
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const DAY_TONES = ["sun", "water", "peach", "sage", "stone"] as const;
+
+// Resolving a Maps link triggers a billed Google Places API call, and this
+// endpoint has no auth (same as the rest of the public Entdecken editing) —
+// so it gets its own tight per-IP cap to bound worst-case cost, separate
+// from the free-to-serve CRUD endpoints above.
+const RESOLVE_LINK_LIMIT_PER_HOUR = 30;
+const RESOLVE_LINK_WINDOW_MS = 60 * 60 * 1000;
+const resolveLinkHits = new Map<string, number[]>();
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const hits = (resolveLinkHits.get(key) ?? []).filter((timestamp) => now - timestamp < RESOLVE_LINK_WINDOW_MS);
+  hits.push(now);
+  resolveLinkHits.set(key, hits);
+  return hits.length > RESOLVE_LINK_LIMIT_PER_HOUR;
+}
 
 function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
   if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
@@ -55,8 +74,13 @@ async function main() {
 
   const app = express();
   app.disable("x-powered-by");
+  // Behind Traefik: trust its X-Forwarded-For so req.ip reflects the real
+  // visitor, which the resolve-link rate limiter below keys on.
+  app.set("trust proxy", true);
 
   app.get("/healthz", (_req, res) => res.type("text").send("ok"));
+
+  app.use(PLACE_PHOTOS_PUBLIC_PATH, express.static(PLACE_PHOTOS_DIR));
 
   app.get("/api/trip", async (_req, res) => {
     try {
@@ -447,6 +471,28 @@ async function main() {
     } catch (error) {
       if (error instanceof ItemNotFoundError) {
         res.status(404).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  app.post("/api/places/resolve-link", express.json({ limit: "10kb" }), async (req, res) => {
+    try {
+      const { url } = req.body ?? {};
+      if (typeof url !== "string" || url.trim().length < 1) {
+        res.status(400).json({ error: "url ist erforderlich." });
+        return;
+      }
+      if (isRateLimited(req.ip ?? "unknown")) {
+        res.status(429).json({ error: "Zu viele Anfragen. Bitte kurz warten und erneut versuchen." });
+        return;
+      }
+      const suggestion = await resolveGoogleMapsLink(url.trim(), PLACE_PHOTOS_DIR, PLACE_PHOTOS_PUBLIC_PATH);
+      res.json({ ok: true, suggestion });
+    } catch (error) {
+      if (error instanceof PlacesApiError) {
+        res.status(error.status).json({ error: error.message });
         return;
       }
       res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });

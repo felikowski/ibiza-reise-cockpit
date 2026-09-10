@@ -17,6 +17,9 @@ const MAX_ITINERARY_DAYS = 30;
 const MAX_TIMELINE_ENTRIES_PER_DAY = 40;
 const MAX_PLACES = 200;
 
+export const PLACE_PHOTOS_DIR = path.join(DATA_DIR, "place-photos");
+export const PLACE_PHOTOS_PUBLIC_PATH = "/api/place-photos";
+
 const DEFAULT_PACKING_PEOPLE = [
   { id: "felix", name: "Felix" },
   { id: "filter", name: "Filter" },
@@ -583,6 +586,18 @@ export async function removePlace(placeId: string): Promise<Trip> {
   if (index < 0) {
     throw new ItemNotFoundError(`Ort nicht gefunden: ${placeId}`);
   }
-  trip.places.splice(index, 1);
-  return writeTrip(trip);
+  const [removed] = trip.places.splice(index, 1);
+  const updated = await writeTrip(trip);
+
+  // Clean up the downloaded Google Places photo, if this place had one —
+  // it's not referenced by anything else once the place itself is gone.
+  const photoPrefix = `${PLACE_PHOTOS_PUBLIC_PATH}/`;
+  if (removed.image?.startsWith(photoPrefix)) {
+    const filename = removed.image.slice(photoPrefix.length);
+    if (filename && !filename.includes("/") && !filename.includes("..")) {
+      await rm(path.join(PLACE_PHOTOS_DIR, filename), { force: true }).catch(() => {});
+    }
+  }
+
+  return updated;
 }
