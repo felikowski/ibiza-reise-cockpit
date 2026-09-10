@@ -111,13 +111,29 @@ export function nearbyPlaces(trip: Trip): Place[] {
   );
 }
 
-/** Timeline entries sorted chronologically by time ("HH:MM"); entries without
- * a time keep their relative order and sort after all timed entries. */
+/** Parses a free-text time like "9:30" or "09:30" into minutes since
+ * midnight. Returns null when the value isn't a recognizable time, e.g. an
+ * empty string. Used so times sort numerically rather than as text, where
+ * "9:30" (missing its leading zero) would otherwise sort after "18:30". */
+function parseTimeMinutes(time: string): number | null {
+  const match = time.trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+/** Timeline entries sorted chronologically by time; entries with no time or
+ * an unrecognizable time keep their relative order and sort after all
+ * timed entries. */
 export function sortedTimeline(timeline: TimelineEntry[]): TimelineEntry[] {
   return [...timeline].sort((a, b) => {
-    if (!a.time) return b.time ? 1 : 0;
-    if (!b.time) return -1;
-    return a.time.localeCompare(b.time);
+    const aMinutes = parseTimeMinutes(a.time);
+    const bMinutes = parseTimeMinutes(b.time);
+    if (aMinutes === null) return bMinutes === null ? 0 : 1;
+    if (bMinutes === null) return -1;
+    return aMinutes - bMinutes;
   });
 }
 
