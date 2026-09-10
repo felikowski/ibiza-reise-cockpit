@@ -953,7 +953,7 @@ function PlaceEditForm({
         </label>
         <label>Breitengrad<input type="number" step="any" value={lat} onChange={(event) => setLat(event.target.value)} placeholder="optional" disabled={pending} /></label>
         <label>Längengrad<input type="number" step="any" value={lon} onChange={(event) => setLon(event.target.value)} placeholder="optional" disabled={pending} /></label>
-        <label className="day-edit-full">Bild-URL<input type="url" value={image} onChange={(event) => setImage(event.target.value)} placeholder="optional" disabled={pending} /></label>
+        <label className="day-edit-full">Bild-URL<input type="text" value={image} onChange={(event) => setImage(event.target.value)} placeholder="optional" disabled={pending} /></label>
         <label className="day-edit-full">Notiz<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={200} disabled={pending} /></label>
       </div>
       <div className="day-edit-actions">
