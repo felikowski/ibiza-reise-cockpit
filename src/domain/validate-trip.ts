@@ -66,7 +66,16 @@ const placeSchema = z.object({
   color: z.string().min(1),
   lat: z.number().min(-90).max(90).optional(),
   lon: z.number().min(-180).max(180).optional(),
-  image: z.string().url().optional(),
+  // Accepts a full URL (hand-pasted or from seed data) as well as a
+  // site-relative path (what the Google Maps link resolver saves downloaded
+  // photos as, e.g. "/api/place-photos/<id>.jpg") — using a relative path
+  // there means the server never has to know its own public domain.
+  image: z
+    .string()
+    .refine((value) => /^https?:\/\//.test(value) || value.startsWith("/"), {
+      message: "muss eine absolute URL oder ein Pfad ab / sein",
+    })
+    .optional(),
 });
 
 const budgetCategorySchema = z.object({
