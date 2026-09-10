@@ -17,6 +17,7 @@ import {
   placeTypes,
   readinessPercent,
   shoppingTotals,
+  sortedTimeline,
   berlinComparisonDays,
   tripDates,
 } from "@/src/domain/derive-trip";
@@ -456,7 +457,7 @@ export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (
               )}
 
               <div className="timeline">
-                {day.timeline.map((entry) =>
+                {sortedTimeline(day.timeline).map((entry) =>
                   editingEntryId === entry.id ? (
                     <TimelineEntryEditForm
                       key={entry.id}

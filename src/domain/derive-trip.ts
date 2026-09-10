@@ -1,5 +1,5 @@
 import { addDays, enumerateDates, formatISODate, parseISODate } from "./dates";
-import type { Budget, DocumentItem, Packing, Place, Shopping, Trip, TripMeta } from "./trip";
+import type { Budget, DocumentItem, Packing, Place, Shopping, TimelineEntry, Trip, TripMeta } from "./trip";
 
 export const BUDGET_SHARE_COUNT = 3;
 
@@ -109,6 +109,16 @@ export function nearbyPlaces(trip: Trip): Place[] {
       hasCoords(place) &&
       haversineKm(trip.meta.destinationLat, trip.meta.destinationLon, place.lat, place.lon) <= NEARBY_RADIUS_KM,
   );
+}
+
+/** Timeline entries sorted chronologically by time ("HH:MM"); entries without
+ * a time keep their relative order and sort after all timed entries. */
+export function sortedTimeline(timeline: TimelineEntry[]): TimelineEntry[] {
+  return [...timeline].sort((a, b) => {
+    if (!a.time) return b.time ? 1 : 0;
+    if (!b.time) return -1;
+    return a.time.localeCompare(b.time);
+  });
 }
 
 export function tripDates(meta: TripMeta): string[] {
