@@ -1,20 +1,26 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import { adminPageHtml } from "./admin-page";
+import { PlacesApiError, resolveGoogleMapsLink } from "./places-client";
 import {
   addItineraryDay,
   addPackingItem,
+  addPlace,
   addShoppingItem,
   addTimelineEntry,
   ensureSeeded,
   ItemNotFoundError,
+  PLACE_PHOTOS_DIR,
+  PLACE_PHOTOS_PUBLIC_PATH,
   readTrip,
   removeItineraryDay,
   removePackingItem,
+  removePlace,
   removeShoppingItem,
   removeTimelineEntry,
   TripValidationError,
   updateItineraryDay,
   updatePackingItem,
+  updatePlace,
   updateShoppingItem,
   updateTimelineEntry,
   writeTrip,
@@ -24,6 +30,22 @@ const PORT = Number(process.env.PORT ?? 4000);
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const DAY_TONES = ["sun", "water", "peach", "sage", "stone"] as const;
+
+// Resolving a Maps link triggers a billed Google Places API call, and this
+// endpoint has no auth (same as the rest of the public Entdecken editing) —
+// so it gets its own tight per-IP cap to bound worst-case cost, separate
+// from the free-to-serve CRUD endpoints above.
+const RESOLVE_LINK_LIMIT_PER_HOUR = 30;
+const RESOLVE_LINK_WINDOW_MS = 60 * 60 * 1000;
+const resolveLinkHits = new Map<string, number[]>();
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const hits = (resolveLinkHits.get(key) ?? []).filter((timestamp) => now - timestamp < RESOLVE_LINK_WINDOW_MS);
+  hits.push(now);
+  resolveLinkHits.set(key, hits);
+  return hits.length > RESOLVE_LINK_LIMIT_PER_HOUR;
+}
 
 function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
   if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
@@ -52,8 +74,13 @@ async function main() {
 
   const app = express();
   app.disable("x-powered-by");
+  // Behind Traefik: trust its X-Forwarded-For so req.ip reflects the real
+  // visitor, which the resolve-link rate limiter below keys on.
+  app.set("trust proxy", true);
 
   app.get("/healthz", (_req, res) => res.type("text").send("ok"));
+
+  app.use(PLACE_PHOTOS_PUBLIC_PATH, express.static(PLACE_PHOTOS_DIR));
 
   app.get("/api/trip", async (_req, res) => {
     try {
@@ -342,6 +369,130 @@ async function main() {
     } catch (error) {
       if (error instanceof ItemNotFoundError) {
         res.status(404).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  const placesJson = express.json({ limit: "100kb" });
+
+  app.post("/api/places", placesJson, async (req, res) => {
+    try {
+      const { name, type, area, note, color, lat, lon, image } = req.body ?? {};
+      if (
+        typeof name !== "string" ||
+        typeof type !== "string" ||
+        typeof area !== "string" ||
+        typeof note !== "string" ||
+        typeof color !== "string" ||
+        (lat !== undefined && lat !== null && typeof lat !== "number") ||
+        (lon !== undefined && lon !== null && typeof lon !== "number") ||
+        (image !== undefined && image !== null && typeof image !== "string")
+      ) {
+        res.status(400).json({ error: "name, type, area, note und color sind erforderlich; lat, lon und image sind optional." });
+        return;
+      }
+      const trip = await addPlace({ name, type, area, note, color, lat: lat ?? null, lon: lon ?? null, image: image ?? null });
+      res.json({ ok: true, trip });
+    } catch (error) {
+      if (error instanceof TripValidationError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  app.patch("/api/places/:id", placesJson, async (req, res) => {
+    try {
+      const { name, type, area, note, color, lat, lon, image } = req.body ?? {};
+      const patch: Partial<{
+        name: string;
+        type: string;
+        area: string;
+        note: string;
+        color: string;
+        lat: number | null;
+        lon: number | null;
+        image: string | null;
+      }> = {};
+      if (name !== undefined) {
+        if (typeof name !== "string") { res.status(400).json({ error: "name muss ein string sein." }); return; }
+        patch.name = name;
+      }
+      if (type !== undefined) {
+        if (typeof type !== "string") { res.status(400).json({ error: "type muss ein string sein." }); return; }
+        patch.type = type;
+      }
+      if (area !== undefined) {
+        if (typeof area !== "string") { res.status(400).json({ error: "area muss ein string sein." }); return; }
+        patch.area = area;
+      }
+      if (note !== undefined) {
+        if (typeof note !== "string") { res.status(400).json({ error: "note muss ein string sein." }); return; }
+        patch.note = note;
+      }
+      if (color !== undefined) {
+        if (typeof color !== "string") { res.status(400).json({ error: "color muss ein string sein." }); return; }
+        patch.color = color;
+      }
+      if (lat !== undefined) {
+        if (lat !== null && typeof lat !== "number") { res.status(400).json({ error: "lat muss eine Zahl oder null sein." }); return; }
+        patch.lat = lat;
+      }
+      if (lon !== undefined) {
+        if (lon !== null && typeof lon !== "number") { res.status(400).json({ error: "lon muss eine Zahl oder null sein." }); return; }
+        patch.lon = lon;
+      }
+      if (image !== undefined) {
+        if (image !== null && typeof image !== "string") { res.status(400).json({ error: "image muss ein string oder null sein." }); return; }
+        patch.image = image;
+      }
+      const trip = await updatePlace(req.params.id, patch);
+      res.json({ ok: true, trip });
+    } catch (error) {
+      if (error instanceof ItemNotFoundError) {
+        res.status(404).json({ error: error.message });
+        return;
+      }
+      if (error instanceof TripValidationError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  app.delete("/api/places/:id", async (req, res) => {
+    try {
+      const trip = await removePlace(req.params.id);
+      res.json({ ok: true, trip });
+    } catch (error) {
+      if (error instanceof ItemNotFoundError) {
+        res.status(404).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  app.post("/api/places/resolve-link", express.json({ limit: "10kb" }), async (req, res) => {
+    try {
+      const { url } = req.body ?? {};
+      if (typeof url !== "string" || url.trim().length < 1) {
+        res.status(400).json({ error: "url ist erforderlich." });
+        return;
+      }
+      if (isRateLimited(req.ip ?? "unknown")) {
+        res.status(429).json({ error: "Zu viele Anfragen. Bitte kurz warten und erneut versuchen." });
+        return;
+      }
+      const suggestion = await resolveGoogleMapsLink(url.trim(), PLACE_PHOTOS_DIR, PLACE_PHOTOS_PUBLIC_PATH);
+      res.json({ ok: true, suggestion });
+    } catch (error) {
+      if (error instanceof PlacesApiError) {
+        res.status(error.status).json({ error: error.message });
         return;
       }
       res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });

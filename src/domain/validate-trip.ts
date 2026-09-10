@@ -58,6 +58,7 @@ const itineraryDaySchema = z.object({
 });
 
 const placeSchema = z.object({
+  id: z.string().min(1),
   name: z.string().min(1),
   type: z.string().min(1),
   area: z.string().min(1),

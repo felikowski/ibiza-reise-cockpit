@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { DayTone, ItineraryDay, PackingItem, ShoppingItem, TimelineEntry, Trip } from "@/src/domain/trip";
+import type { DayTone, ItineraryDay, PackingItem, Place, ShoppingItem, TimelineEntry, Trip } from "@/src/domain/trip";
 import {
   budgetGrandTotal,
   confirmedBookings,
@@ -106,6 +106,51 @@ function patchTimelineEntry(entryId: string, patch: Partial<TimelineEntryFields>
 
 function removeTimelineEntry(entryId: string): Promise<Trip> {
   return submitTripRequest(`/api/itinerary/timeline/${entryId}`, "DELETE");
+}
+
+interface PlaceFields {
+  name: string;
+  type: string;
+  area: string;
+  note: string;
+  color: string;
+  lat: number | null;
+  lon: number | null;
+  image: string | null;
+}
+
+function addPlace(fields: PlaceFields): Promise<Trip> {
+  return submitTripRequest("/api/places", "POST", fields);
+}
+
+function patchPlace(placeId: string, patch: Partial<PlaceFields>): Promise<Trip> {
+  return submitTripRequest(`/api/places/${placeId}`, "PATCH", patch);
+}
+
+function removePlace(placeId: string): Promise<Trip> {
+  return submitTripRequest(`/api/places/${placeId}`, "DELETE");
+}
+
+interface PlaceLinkSuggestion {
+  name: string;
+  type: string;
+  area: string;
+  lat: number;
+  lon: number;
+  image: string | null;
+}
+
+async function resolvePlaceLink(url: string): Promise<PlaceLinkSuggestion> {
+  const response = await fetch("/api/places/resolve-link", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error ?? `Server antwortete mit ${response.status}`);
+  }
+  return payload.suggestion as PlaceLinkSuggestion;
 }
 
 export function Overview({
@@ -693,8 +738,24 @@ export function Bookings({ trip, copied, onCopy }: { trip: Trip; copied: string 
 
 const NEARBY_FILTER = "In der Nähe";
 
-export function Discover({ trip }: { trip: Trip }) {
+const PLACE_COLOR_OPTIONS: { value: string; label: string }[] = [
+  { value: "peach", label: "Pfirsich" },
+  { value: "sage", label: "Salbei" },
+  { value: "lavender", label: "Lavendel" },
+  { value: "sky", label: "Himmel" },
+  { value: "sand", label: "Sand" },
+  { value: "aqua", label: "Aqua" },
+];
+
+const NEW_PLACE_DRAFT: Place = { id: "", name: "", type: "", area: "", note: "", color: PLACE_COLOR_OPTIONS[0].value };
+
+export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (trip: Trip) => void }) {
   const [filter, setFilter] = useState("Alle");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+
   const filterOptions = ["Alle", NEARBY_FILTER, ...placeTypes(trip).slice(1)];
   const visible =
     filter === "Alle" ? trip.places : filter === NEARBY_FILTER ? nearbyPlaces(trip) : trip.places.filter((place) => place.type === filter);
@@ -704,33 +765,202 @@ export function Discover({ trip }: { trip: Trip }) {
     title: trip.accommodation.name,
     subtitle: `Eure Finca · ${trip.accommodation.area}`,
   };
+
+  const run = async (action: () => Promise<Trip>) => {
+    setPending(true);
+    setError(null);
+    try {
+      onTripChange(await action());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleAdd = (fields: PlaceFields) =>
+    run(async () => {
+      const updated = await addPlace(fields);
+      setAdding(false);
+      setFilter("Alle");
+      return updated;
+    });
+
+  const handleSave = (placeId: string, fields: PlaceFields) =>
+    run(async () => {
+      const updated = await patchPlace(placeId, fields);
+      setEditingId(null);
+      return updated;
+    });
+
+  const handleRemove = (placeId: string) => run(() => removePlace(placeId));
+
   return (
     <section className="page inner-page">
       <PageIntro eyebrow="ENTDECKEN" title="Buchten, Bars, Aussichtspunkte." copy="Deine Merkliste für Buchten, Dörfer, gutes Essen und die besten Aussichten." />
       <div className="filter-row">{filterOptions.map((item) => <button key={item} onClick={() => setFilter(item)} className={filter === item ? "active" : ""}>{item}</button>)}</div>
+      {error && <p className="packing-error">{error}</p>}
       <div className="places-layout">
         <DiscoverMap home={home} places={visible} />
         <div className="place-grid">
-          {visible.map((place, index) => (
-            <article className="card place-card" key={place.name}>
-              {place.image ? (
-                <img className="place-photo" src={place.image} alt="" loading="lazy" />
-              ) : (
-                <span className={`place-color ${place.color}`}>{String(index + 1).padStart(2, "0")}</span>
-              )}
-              <div className="place-card-body">
-                <div><small>{place.type} · {place.area}</small><h2>{place.name}</h2><p>{place.note}</p></div>
-                {hasCoords(place) ? (
-                  <a className="place-open" href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer" aria-label={`${place.name} in Google Maps öffnen`}>↗</a>
+          {visible.map((place, index) =>
+            editingId === place.id ? (
+              <PlaceEditForm
+                key={place.id}
+                place={place}
+                pending={pending}
+                submitLabel="Speichern"
+                onSave={(fields) => handleSave(place.id, fields)}
+                onCancel={() => setEditingId(null)}
+              />
+            ) : (
+              <article className="card place-card" key={place.id}>
+                {place.image ? (
+                  <img className="place-photo" src={place.image} alt="" loading="lazy" />
                 ) : (
-                  <span className="place-open place-open-disabled" aria-hidden="true">↗</span>
+                  <span className={`place-color ${place.color}`}>{String(index + 1).padStart(2, "0")}</span>
                 )}
-              </div>
-            </article>
-          ))}
+                <div className="place-card-body">
+                  <div><small>{place.type} · {place.area}</small><h2>{place.name}</h2><p>{place.note}</p></div>
+                  <div className="place-card-actions">
+                    {hasCoords(place) ? (
+                      <a className="place-open" href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer" aria-label={`${place.name} in Google Maps öffnen`}>↗</a>
+                    ) : (
+                      <span className="place-open place-open-disabled" aria-hidden="true">↗</span>
+                    )}
+                    <button
+                      type="button"
+                      className="place-edit"
+                      aria-label={`${place.name} bearbeiten`}
+                      onClick={() => { setEditingId(place.id); setAdding(false); }}
+                      disabled={pending}
+                    >
+                      ✎
+                    </button>
+                    <button type="button" className="packing-remove" aria-label={`${place.name} entfernen`} onClick={() => handleRemove(place.id)} disabled={pending}>×</button>
+                  </div>
+                </div>
+              </article>
+            ),
+          )}
+          {adding ? (
+            <PlaceEditForm
+              place={NEW_PLACE_DRAFT}
+              pending={pending}
+              submitLabel="Ort anlegen"
+              heading="Neuer Ort"
+              onSave={handleAdd}
+              onCancel={() => setAdding(false)}
+            />
+          ) : (
+            <button type="button" className="place-add-toggle" onClick={() => { setAdding(true); setEditingId(null); }} disabled={pending}>+ Ort hinzufügen</button>
+          )}
         </div>
       </div>
     </section>
+  );
+}
+
+function PlaceEditForm({
+  place,
+  pending,
+  submitLabel,
+  heading,
+  onSave,
+  onCancel,
+}: {
+  place: Place;
+  pending: boolean;
+  submitLabel: string;
+  heading?: string;
+  onSave: (fields: PlaceFields) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(place.name);
+  const [type, setType] = useState(place.type);
+  const [area, setArea] = useState(place.area);
+  const [note, setNote] = useState(place.note);
+  const [color, setColor] = useState(place.color || PLACE_COLOR_OPTIONS[0].value);
+  const [lat, setLat] = useState(place.lat !== undefined ? String(place.lat) : "");
+  const [lon, setLon] = useState(place.lon !== undefined ? String(place.lon) : "");
+  const [image, setImage] = useState(place.image ?? "");
+  const [mapsLink, setMapsLink] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+
+  const handleResolve = async () => {
+    const trimmedLink = mapsLink.trim();
+    if (!trimmedLink) return;
+    setResolving(true);
+    setResolveError(null);
+    try {
+      const suggestion = await resolvePlaceLink(trimmedLink);
+      if (suggestion.name) setName(suggestion.name);
+      if (suggestion.type) setType(suggestion.type);
+      if (suggestion.area) setArea(suggestion.area);
+      setLat(String(suggestion.lat));
+      setLon(String(suggestion.lon));
+      if (suggestion.image) setImage(suggestion.image);
+    } catch (err) {
+      setResolveError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!name.trim() || !type.trim() || !area.trim()) return;
+    const parsedLat = lat.trim() ? Number(lat) : null;
+    const parsedLon = lon.trim() ? Number(lon) : null;
+    if ((lat.trim() && Number.isNaN(parsedLat)) || (lon.trim() && Number.isNaN(parsedLon))) return;
+    onSave({
+      name: name.trim(),
+      type: type.trim(),
+      area: area.trim(),
+      note,
+      color,
+      lat: parsedLat,
+      lon: parsedLon,
+      image: image.trim() ? image.trim() : null,
+    });
+  };
+
+  return (
+    <form className="card place-edit-form" onSubmit={submit}>
+      {heading && <h2 className="day-edit-heading">{heading}</h2>}
+      <div className="place-link-row">
+        <input
+          type="url"
+          placeholder="Google-Maps-Link einfügen …"
+          value={mapsLink}
+          onChange={(event) => setMapsLink(event.target.value)}
+          disabled={pending || resolving}
+        />
+        <button type="button" className="day-edit-btn secondary" onClick={handleResolve} disabled={pending || resolving || !mapsLink.trim()}>
+          {resolving ? "Lädt …" : "Angaben laden"}
+        </button>
+      </div>
+      {resolveError && <p className="packing-error">{resolveError}</p>}
+      <div className="day-edit-grid">
+        <label>Name<input type="text" value={name} onChange={(event) => setName(event.target.value)} maxLength={80} disabled={pending} /></label>
+        <label>Kategorie<input type="text" value={type} onChange={(event) => setType(event.target.value)} maxLength={40} placeholder="z. B. Bar, Strand …" disabled={pending} /></label>
+        <label>Gebiet<input type="text" value={area} onChange={(event) => setArea(event.target.value)} maxLength={60} disabled={pending} /></label>
+        <label>Farbe
+          <select value={color} onChange={(event) => setColor(event.target.value)} disabled={pending}>
+            {PLACE_COLOR_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+        </label>
+        <label>Breitengrad<input type="number" step="any" value={lat} onChange={(event) => setLat(event.target.value)} placeholder="optional" disabled={pending} /></label>
+        <label>Längengrad<input type="number" step="any" value={lon} onChange={(event) => setLon(event.target.value)} placeholder="optional" disabled={pending} /></label>
+        <label className="day-edit-full">Bild-URL<input type="url" value={image} onChange={(event) => setImage(event.target.value)} placeholder="optional" disabled={pending} /></label>
+        <label className="day-edit-full">Notiz<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={200} disabled={pending} /></label>
+      </div>
+      <div className="day-edit-actions">
+        <button type="button" className="day-edit-btn secondary" onClick={onCancel} disabled={pending}>Abbrechen</button>
+        <button type="submit" className="day-edit-btn" disabled={pending || !name.trim() || !type.trim() || !area.trim()}>{submitLabel}</button>
+      </div>
+    </form>
   );
 }
 
