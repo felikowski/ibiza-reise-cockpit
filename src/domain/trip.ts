@@ -55,6 +55,7 @@ export interface ItineraryDay {
 }
 
 export interface Place {
+  id: string;
   name: string;
   type: string;
   area: string;

@@ -3,6 +3,7 @@ import { adminPageHtml } from "./admin-page";
 import {
   addItineraryDay,
   addPackingItem,
+  addPlace,
   addShoppingItem,
   addTimelineEntry,
   ensureSeeded,
@@ -10,11 +11,13 @@ import {
   readTrip,
   removeItineraryDay,
   removePackingItem,
+  removePlace,
   removeShoppingItem,
   removeTimelineEntry,
   TripValidationError,
   updateItineraryDay,
   updatePackingItem,
+  updatePlace,
   updateShoppingItem,
   updateTimelineEntry,
   writeTrip,
@@ -338,6 +341,108 @@ async function main() {
   app.delete("/api/itinerary/timeline/:id", async (req, res) => {
     try {
       const trip = await removeTimelineEntry(req.params.id);
+      res.json({ ok: true, trip });
+    } catch (error) {
+      if (error instanceof ItemNotFoundError) {
+        res.status(404).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  const placesJson = express.json({ limit: "100kb" });
+
+  app.post("/api/places", placesJson, async (req, res) => {
+    try {
+      const { name, type, area, note, color, lat, lon, image } = req.body ?? {};
+      if (
+        typeof name !== "string" ||
+        typeof type !== "string" ||
+        typeof area !== "string" ||
+        typeof note !== "string" ||
+        typeof color !== "string" ||
+        (lat !== undefined && lat !== null && typeof lat !== "number") ||
+        (lon !== undefined && lon !== null && typeof lon !== "number") ||
+        (image !== undefined && image !== null && typeof image !== "string")
+      ) {
+        res.status(400).json({ error: "name, type, area, note und color sind erforderlich; lat, lon und image sind optional." });
+        return;
+      }
+      const trip = await addPlace({ name, type, area, note, color, lat: lat ?? null, lon: lon ?? null, image: image ?? null });
+      res.json({ ok: true, trip });
+    } catch (error) {
+      if (error instanceof TripValidationError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  app.patch("/api/places/:id", placesJson, async (req, res) => {
+    try {
+      const { name, type, area, note, color, lat, lon, image } = req.body ?? {};
+      const patch: Partial<{
+        name: string;
+        type: string;
+        area: string;
+        note: string;
+        color: string;
+        lat: number | null;
+        lon: number | null;
+        image: string | null;
+      }> = {};
+      if (name !== undefined) {
+        if (typeof name !== "string") { res.status(400).json({ error: "name muss ein string sein." }); return; }
+        patch.name = name;
+      }
+      if (type !== undefined) {
+        if (typeof type !== "string") { res.status(400).json({ error: "type muss ein string sein." }); return; }
+        patch.type = type;
+      }
+      if (area !== undefined) {
+        if (typeof area !== "string") { res.status(400).json({ error: "area muss ein string sein." }); return; }
+        patch.area = area;
+      }
+      if (note !== undefined) {
+        if (typeof note !== "string") { res.status(400).json({ error: "note muss ein string sein." }); return; }
+        patch.note = note;
+      }
+      if (color !== undefined) {
+        if (typeof color !== "string") { res.status(400).json({ error: "color muss ein string sein." }); return; }
+        patch.color = color;
+      }
+      if (lat !== undefined) {
+        if (lat !== null && typeof lat !== "number") { res.status(400).json({ error: "lat muss eine Zahl oder null sein." }); return; }
+        patch.lat = lat;
+      }
+      if (lon !== undefined) {
+        if (lon !== null && typeof lon !== "number") { res.status(400).json({ error: "lon muss eine Zahl oder null sein." }); return; }
+        patch.lon = lon;
+      }
+      if (image !== undefined) {
+        if (image !== null && typeof image !== "string") { res.status(400).json({ error: "image muss ein string oder null sein." }); return; }
+        patch.image = image;
+      }
+      const trip = await updatePlace(req.params.id, patch);
+      res.json({ ok: true, trip });
+    } catch (error) {
+      if (error instanceof ItemNotFoundError) {
+        res.status(404).json({ error: error.message });
+        return;
+      }
+      if (error instanceof TripValidationError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  app.delete("/api/places/:id", async (req, res) => {
+    try {
+      const trip = await removePlace(req.params.id);
       res.json({ ok: true, trip });
     } catch (error) {
       if (error instanceof ItemNotFoundError) {

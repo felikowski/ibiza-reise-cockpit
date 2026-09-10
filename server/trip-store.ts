@@ -15,6 +15,7 @@ const MAX_SHOPPING_ITEMS = 300;
 const MAX_LABEL_LENGTH = 120;
 const MAX_ITINERARY_DAYS = 30;
 const MAX_TIMELINE_ENTRIES_PER_DAY = 40;
+const MAX_PLACES = 200;
 
 const DEFAULT_PACKING_PEOPLE = [
   { id: "felix", name: "Felix" },
@@ -158,6 +159,30 @@ function migrateLegacyItinerary(raw: unknown): unknown {
   };
 }
 
+/** Adds `id` fields to places for older `trip.json` files that predate
+ * per-item editing (added alongside the places CRUD API), so they keep
+ * working without a manual migration step. No-op once every place already
+ * has an id. */
+function migrateLegacyPlaces(raw: unknown): unknown {
+  if (typeof raw !== "object" || raw === null || !("places" in raw)) return raw;
+  const record = raw as Record<string, unknown>;
+  const places = record.places;
+  if (!Array.isArray(places)) return raw;
+
+  const needsMigration = places.some(
+    (place) => typeof place !== "object" || place === null || typeof (place as Record<string, unknown>).id !== "string",
+  );
+  if (!needsMigration) return raw;
+
+  return {
+    ...record,
+    places: places.map((place) => {
+      const placeRecord = place as Record<string, unknown>;
+      return { ...placeRecord, id: typeof placeRecord.id === "string" ? placeRecord.id : randomUUID() };
+    }),
+  };
+}
+
 export async function ensureSeeded(): Promise<void> {
   await mkdir(DATA_DIR, { recursive: true });
   if (!existsSync(TRIP_FILE)) {
@@ -167,7 +192,7 @@ export async function ensureSeeded(): Promise<void> {
 
 export async function readTrip(): Promise<Trip> {
   const raw = await readFile(TRIP_FILE, "utf8");
-  const result = validateTrip(migrateLegacyItinerary(migrateLegacyShopping(migrateLegacyPacking(JSON.parse(raw)))));
+  const result = validateTrip(migrateLegacyPlaces(migrateLegacyItinerary(migrateLegacyShopping(migrateLegacyPacking(JSON.parse(raw))))));
   if (!result.success) {
     throw new TripValidationError(result.error);
   }
@@ -480,5 +505,84 @@ export async function removeTimelineEntry(entryId: string): Promise<Trip> {
   if (!found) {
     throw new ItemNotFoundError(`Tagesablauf-Eintrag nicht gefunden: ${entryId}`);
   }
+  return writeTrip(trip);
+}
+
+export interface PlaceFields {
+  name: string;
+  type: string;
+  area: string;
+  note: string;
+  color: string;
+  lat: number | null;
+  lon: number | null;
+  image: string | null;
+}
+
+function assertPlaceFields(fields: Partial<PlaceFields>): void {
+  if (fields.name !== undefined && fields.name.trim().length < 1) {
+    throw new TripValidationError("Name darf nicht leer sein.");
+  }
+  if (fields.type !== undefined && fields.type.trim().length < 1) {
+    throw new TripValidationError("Kategorie darf nicht leer sein.");
+  }
+  if (fields.area !== undefined && fields.area.trim().length < 1) {
+    throw new TripValidationError("Gebiet darf nicht leer sein.");
+  }
+  if (fields.color !== undefined && fields.color.trim().length < 1) {
+    throw new TripValidationError("Farbe darf nicht leer sein.");
+  }
+}
+
+export async function addPlace(fields: PlaceFields): Promise<Trip> {
+  assertPlaceFields(fields);
+
+  const trip = await readTrip();
+  if (trip.places.length >= MAX_PLACES) {
+    throw new TripValidationError(`Die Merkliste hat das Limit von ${MAX_PLACES} Orten erreicht.`);
+  }
+
+  trip.places.push({
+    id: randomUUID(),
+    name: fields.name.trim(),
+    type: fields.type.trim(),
+    area: fields.area.trim(),
+    note: fields.note.trim(),
+    color: fields.color.trim(),
+    lat: fields.lat ?? undefined,
+    lon: fields.lon ?? undefined,
+    image: fields.image?.trim() ? fields.image.trim() : undefined,
+  });
+  return writeTrip(trip);
+}
+
+export async function updatePlace(placeId: string, patch: Partial<PlaceFields>): Promise<Trip> {
+  assertPlaceFields(patch);
+
+  const trip = await readTrip();
+  const place = trip.places.find((candidate) => candidate.id === placeId);
+  if (!place) {
+    throw new ItemNotFoundError(`Ort nicht gefunden: ${placeId}`);
+  }
+
+  if (patch.name !== undefined) place.name = patch.name.trim();
+  if (patch.type !== undefined) place.type = patch.type.trim();
+  if (patch.area !== undefined) place.area = patch.area.trim();
+  if (patch.note !== undefined) place.note = patch.note.trim();
+  if (patch.color !== undefined) place.color = patch.color.trim();
+  if (patch.lat !== undefined) place.lat = patch.lat ?? undefined;
+  if (patch.lon !== undefined) place.lon = patch.lon ?? undefined;
+  if (patch.image !== undefined) place.image = patch.image?.trim() ? patch.image.trim() : undefined;
+
+  return writeTrip(trip);
+}
+
+export async function removePlace(placeId: string): Promise<Trip> {
+  const trip = await readTrip();
+  const index = trip.places.findIndex((place) => place.id === placeId);
+  if (index < 0) {
+    throw new ItemNotFoundError(`Ort nicht gefunden: ${placeId}`);
+  }
+  trip.places.splice(index, 1);
   return writeTrip(trip);
 }
