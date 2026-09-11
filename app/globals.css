@@ -30,7 +30,11 @@ button { color: inherit; }
 .topbar {
   height: 82px; padding: 0 4.5vw; display: flex; align-items: center; gap: 32px;
   border-bottom: 1px solid rgba(34,50,45,.14); background: rgba(244,241,234,.94);
-  position: sticky; top: 0; z-index: 30; backdrop-filter: blur(16px);
+  position: sticky; top: 0; z-index: 30;
+  /* No backdrop-filter here: it would make .topbar a containing block for its
+     position:fixed descendants (the mobile .tabbar's bottom:0 tab strip),
+     pinning it to the header's own box instead of the viewport — covering
+     the rest of the header (avatars, name, settings, logout) on mobile. */
 }
 .brand { border: 0; background: transparent; display: flex; align-items: center; gap: 12px; padding: 0; cursor: pointer; min-width: 166px; text-align: left; }
 .brand-mark { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: white; background: var(--coral); font-weight: 800; font-size: 11px; letter-spacing: .15em; box-shadow: inset 0 0 0 1px rgba(0,0,0,.05); }
