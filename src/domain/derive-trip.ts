@@ -20,11 +20,21 @@ export function nightsBetween(meta: TripMeta): number {
   return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export function countdownDays(meta: TripMeta, now: Date = new Date()): number {
+export type TripCountdown =
+  | { phase: "upcoming"; daysUntil: number }
+  | { phase: "ongoing"; dayNumber: number; totalDays: number }
+  | { phase: "done" };
+
+export function tripCountdown(meta: TripMeta, now: Date = new Date()): TripCountdown {
   const start = parseISODate(meta.startDate);
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const diff = Math.round((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.max(diff, 0);
+  const daysUntil = Math.round((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysUntil > 0) return { phase: "upcoming", daysUntil };
+
+  const totalDays = nightsBetween(meta) + 1;
+  const dayNumber = -daysUntil + 1;
+  if (dayNumber <= totalDays) return { phase: "ongoing", dayNumber, totalDays };
+  return { phase: "done" };
 }
 
 export function budgetGrandTotal(budget: Budget): number {
