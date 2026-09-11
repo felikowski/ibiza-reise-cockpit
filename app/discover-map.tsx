@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { Map as LeafletMap, LayerGroup } from "leaflet";
 import type { Place } from "@/src/domain/trip";
 import { hasCoords } from "@/src/domain/derive-trip";
+import type { MapProvider } from "@/src/domain/user-settings";
 import "leaflet/dist/leaflet.css";
 
 export interface MapHome {
@@ -25,9 +26,23 @@ const TYPE_COLORS: Record<string, string> = {
 };
 const DEFAULT_PIN_COLOR = "#789887";
 
-export function googleMapsUrl(place: Pick<Place, "name" | "area">): string {
+type LinkablePlace = Pick<Place, "name" | "area" | "lat" | "lon">;
+
+export function googleMapsUrl(place: LinkablePlace): string {
   const query = `${place.name}, ${place.area}, Ibiza`;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+export function appleMapsUrl(place: LinkablePlace): string {
+  if (place.lat !== undefined && place.lon !== undefined) {
+    return `https://maps.apple.com/?ll=${place.lat},${place.lon}&q=${encodeURIComponent(place.name)}`;
+  }
+  const query = `${place.name}, ${place.area}, Ibiza`;
+  return `https://maps.apple.com/?q=${encodeURIComponent(query)}`;
+}
+
+export function placeMapsUrl(place: LinkablePlace, provider: MapProvider): string {
+  return provider === "apple" ? appleMapsUrl(place) : googleMapsUrl(place);
 }
 
 function escapeHtml(value: string): string {
@@ -37,7 +52,7 @@ function escapeHtml(value: string): string {
 /** Draws the home + place markers and returns their combined bounds. Doesn't
  * touch the map's viewport itself — callers decide whether/when to fit it,
  * so switching a filter can swap pins without yanking the camera around. */
-async function renderMarkers(map: LeafletMap, layer: LayerGroup, home: MapHome, places: Place[]) {
+async function renderMarkers(map: LeafletMap, layer: LayerGroup, home: MapHome, places: Place[], mapProvider: MapProvider) {
   const { default: L } = await import("leaflet");
   layer.clearLayers();
 
@@ -67,7 +82,7 @@ async function renderMarkers(map: LeafletMap, layer: LayerGroup, home: MapHome, 
     const popup =
       `<h3>${escapeHtml(place.name)}</h3><p class="popup-meta">${escapeHtml(place.type)} · ${escapeHtml(place.area)}</p>` +
       (place.note ? `<p>${escapeHtml(place.note)}</p>` : "") +
-      `<a href="${googleMapsUrl(place)}" target="_blank" rel="noopener noreferrer">In Google Maps öffnen ↗</a>`;
+      `<a href="${placeMapsUrl(place, mapProvider)}" target="_blank" rel="noopener noreferrer">In ${mapProvider === "apple" ? "Apple Karten" : "Google Maps"} öffnen ↗</a>`;
     L.marker([place.lat, place.lon], { icon }).addTo(layer).bindPopup(popup);
     bounds.extend([place.lat, place.lon]);
   }
@@ -75,7 +90,7 @@ async function renderMarkers(map: LeafletMap, layer: LayerGroup, home: MapHome, 
   return bounds;
 }
 
-export default function DiscoverMap({ home, places }: { home: MapHome; places: Place[] }) {
+export default function DiscoverMap({ home, places, mapProvider }: { home: MapHome; places: Place[]; mapProvider: MapProvider }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const layerRef = useRef<LayerGroup | null>(null);
@@ -95,7 +110,7 @@ export default function DiscoverMap({ home, places }: { home: MapHome; places: P
       const layer = L.layerGroup().addTo(map);
       mapRef.current = map;
       layerRef.current = layer;
-      const bounds = await renderMarkers(map, layer, home, places);
+      const bounds = await renderMarkers(map, layer, home, places, mapProvider);
       if (cancelled) return;
       map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 });
     });
@@ -112,8 +127,8 @@ export default function DiscoverMap({ home, places }: { home: MapHome; places: P
 
   useEffect(() => {
     if (!mapRef.current || !layerRef.current) return;
-    renderMarkers(mapRef.current, layerRef.current, home, places);
-  }, [home, places]);
+    renderMarkers(mapRef.current, layerRef.current, home, places, mapProvider);
+  }, [home, places, mapProvider]);
 
   return (
     <div
