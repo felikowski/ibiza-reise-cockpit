@@ -153,6 +153,19 @@ async function resolvePlaceLink(url: string): Promise<PlaceLinkSuggestion> {
   return payload.suggestion as PlaceLinkSuggestion;
 }
 
+async function resolveApplePlaceLink(url: string): Promise<PlaceLinkSuggestion> {
+  const response = await fetch("/api/places/resolve-apple-link", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error ?? `Server antwortete mit ${response.status}`);
+  }
+  return payload.suggestion as PlaceLinkSuggestion;
+}
+
 export function Overview({
   trip,
   weather,
@@ -903,6 +916,18 @@ function PlaceEditForm({
   const [mapsLink, setMapsLink] = useState("");
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [appleMapsLink, setAppleMapsLink] = useState("");
+  const [resolvingApple, setResolvingApple] = useState(false);
+  const [resolveAppleError, setResolveAppleError] = useState<string | null>(null);
+
+  const applySuggestion = (suggestion: PlaceLinkSuggestion) => {
+    if (suggestion.name) setName(suggestion.name);
+    if (suggestion.type) setType(suggestion.type);
+    if (suggestion.area) setArea(suggestion.area);
+    setLat(String(suggestion.lat));
+    setLon(String(suggestion.lon));
+    if (suggestion.image) setImage(suggestion.image);
+  };
 
   const handleResolve = async () => {
     const trimmedLink = mapsLink.trim();
@@ -910,17 +935,25 @@ function PlaceEditForm({
     setResolving(true);
     setResolveError(null);
     try {
-      const suggestion = await resolvePlaceLink(trimmedLink);
-      if (suggestion.name) setName(suggestion.name);
-      if (suggestion.type) setType(suggestion.type);
-      if (suggestion.area) setArea(suggestion.area);
-      setLat(String(suggestion.lat));
-      setLon(String(suggestion.lon));
-      if (suggestion.image) setImage(suggestion.image);
+      applySuggestion(await resolvePlaceLink(trimmedLink));
     } catch (err) {
       setResolveError(err instanceof Error ? err.message : "Unbekannter Fehler");
     } finally {
       setResolving(false);
+    }
+  };
+
+  const handleResolveApple = async () => {
+    const trimmedLink = appleMapsLink.trim();
+    if (!trimmedLink) return;
+    setResolvingApple(true);
+    setResolveAppleError(null);
+    try {
+      applySuggestion(await resolveApplePlaceLink(trimmedLink));
+    } catch (err) {
+      setResolveAppleError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setResolvingApple(false);
     }
   };
 
@@ -958,6 +991,19 @@ function PlaceEditForm({
         </button>
       </div>
       {resolveError && <p className="packing-error">{resolveError}</p>}
+      <div className="place-link-row">
+        <input
+          type="url"
+          placeholder="Apple-Karten-Link einfügen …"
+          value={appleMapsLink}
+          onChange={(event) => setAppleMapsLink(event.target.value)}
+          disabled={pending || resolvingApple}
+        />
+        <button type="button" className="day-edit-btn secondary" onClick={handleResolveApple} disabled={pending || resolvingApple || !appleMapsLink.trim()}>
+          {resolvingApple ? "Lädt …" : "Angaben laden"}
+        </button>
+      </div>
+      {resolveAppleError && <p className="packing-error">{resolveAppleError}</p>}
       <div className="day-edit-grid">
         <label>Name<input type="text" value={name} onChange={(event) => setName(event.target.value)} maxLength={80} disabled={pending} /></label>
         <label>Kategorie<input type="text" value={type} onChange={(event) => setType(event.target.value)} maxLength={40} placeholder="z. B. Bar, Strand …" disabled={pending} /></label>
