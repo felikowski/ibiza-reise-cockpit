@@ -197,7 +197,6 @@ export function Overview({
             <span>{trip.meta.travelersCount} Reisende</span>
             <span>{trip.meta.accommodationLabel}</span>
           </div>
-          <div className="sample-badge">Beispieldaten · frei anpassbar</div>
         </div>
 
         <div className="countdown-card">
@@ -1459,5 +1458,5 @@ function CardHeader({
 }
 
 function PageIntro({ eyebrow, title, copy }: { eyebrow: string; title: string; copy: string }) {
-  return <header className="page-intro"><div className="eyebrow"><span /> {eyebrow}</div><h1>{title}</h1><p>{copy}</p><div className="sample-badge">Beispieldaten · frei anpassbar</div></header>;
+  return <header className="page-intro"><div className="eyebrow"><span /> {eyebrow}</div><h1>{title}</h1><p>{copy}</p></header>;
 }
