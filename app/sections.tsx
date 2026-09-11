@@ -5,7 +5,7 @@ import type { DayTone, ItineraryDay, PackingItem, Place, ShoppingItem, TimelineE
 import {
   budgetGrandTotal,
   confirmedBookings,
-  countdownDays,
+  tripCountdown,
   documentsReadiness,
   formatEuroExact,
   hasCoords,
@@ -176,7 +176,7 @@ export function Overview({
   onNavigate: (tab: TabId) => void;
 }) {
   const nights = nightsBetween(trip.meta);
-  const countdown = countdownDays(trip.meta);
+  const countdown = tripCountdown(trip.meta);
   const budgetTotal = budgetGrandTotal(trip.budget);
   const bookings = confirmedBookings(trip);
   const docs = documentsReadiness(trip.documents);
@@ -202,11 +202,33 @@ export function Overview({
 
         <div className="countdown-card">
           <span className="sun-disc" />
-          <div className="countdown-label">Noch</div>
-          <div className="countdown-number">{countdown}</div>
-          <div className="countdown-days">Tage</div>
-          <div className="countdown-rule" />
-          <p>Erst der Countdown.<br />Dann das kalte Bier.</p>
+          {countdown.phase === "upcoming" && (
+            <>
+              <div className="countdown-label">Noch</div>
+              <div className="countdown-number">{countdown.daysUntil}</div>
+              <div className="countdown-days">Tage</div>
+              <div className="countdown-rule" />
+              <p>Erst der Countdown.<br />Dann das kalte Bier.</p>
+            </>
+          )}
+          {countdown.phase === "ongoing" && (
+            <>
+              <div className="countdown-label">Heute Tag</div>
+              <div className="countdown-number">{countdown.dayNumber}<span className="countdown-of">/{countdown.totalDays}</span></div>
+              <div className="countdown-days">vor Ort</div>
+              <div className="countdown-rule" />
+              <p>Mittendrin.<br />Genieß das kalte Bier.</p>
+            </>
+          )}
+          {countdown.phase === "done" && (
+            <>
+              <div className="countdown-label">Zurück</div>
+              <div className="countdown-number">☀︎</div>
+              <div className="countdown-days">aus Ibiza</div>
+              <div className="countdown-rule" />
+              <p>Der Urlaub ist vorbei.<br />Auf zum nächsten.</p>
+            </>
+          )}
         </div>
       </div>
 
