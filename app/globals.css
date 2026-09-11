@@ -74,6 +74,7 @@ button { color: inherit; }
 .sun-disc { display: block; position: absolute; width: 22px; height: 22px; background: var(--yellow); border-radius: 50%; top: 26px; left: 31px; box-shadow: 0 0 0 7px rgba(237,184,77,.13); }
 .countdown-label { margin-top: 12px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .16em; font-weight: 700; }
 .countdown-number { font: 400 75px/.9 var(--serif); margin-top: 8px; color: var(--coral-deep); }
+.countdown-of { font-size: .4em; color: var(--muted); }
 .countdown-days { font: italic 18px/1.2 var(--serif); }
 .countdown-rule { width: 46px; height: 1px; background: var(--line); margin: 19px auto 12px; }
 .countdown-card p { color: var(--muted); font: italic 12px/1.45 var(--serif); margin: 0; }
