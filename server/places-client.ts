@@ -97,7 +97,7 @@ async function resolveRedirect(startUrl: string, allowedHosts: string[], headers
 function describeLandingSpot(url: string): string {
   try {
     const landed = new URL(url);
-    return ` (gelandet auf: ${landed.hostname}${landed.pathname})`;
+    return ` (gelandet auf: ${landed.hostname}${landed.pathname}${landed.search})`;
   } catch {
     return "";
   }
@@ -105,15 +105,35 @@ function describeLandingSpot(url: string): string {
 
 const COORD_PATTERN = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
 const PLACE_NAME_PATTERN = /\/maps\/place\/([^/@]+)/;
+const BARE_COORD_PATTERN = /^(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)$/;
 
+/** Older/short-link resolutions put the place in the URL path
+ * (/maps/place/Name/@lat,lon); newer ones can instead land on a bare
+ * "/maps" page with the place carried as a "q" or "query" search param
+ * (either a name to search for, or "lat,lon" coordinates) — so both need
+ * checking before giving up on a link. */
 function extractLinkHints(url: string): { name?: string; lat?: number; lon?: number } {
   const coordMatch = url.match(COORD_PATTERN);
   const nameMatch = url.match(PLACE_NAME_PATTERN);
-  return {
-    name: nameMatch ? decodeURIComponent(nameMatch[1].replace(/\+/g, " ")) : undefined,
-    lat: coordMatch ? Number(coordMatch[1]) : undefined,
-    lon: coordMatch ? Number(coordMatch[2]) : undefined,
-  };
+  let name = nameMatch ? decodeURIComponent(nameMatch[1].replace(/\+/g, " ")) : undefined;
+  let lat = coordMatch ? Number(coordMatch[1]) : undefined;
+  let lon = coordMatch ? Number(coordMatch[2]) : undefined;
+
+  if (!name && (lat === undefined || lon === undefined)) {
+    const params = new URL(url).searchParams;
+    const query = params.get("query") ?? params.get("q");
+    if (query) {
+      const bareCoordMatch = query.match(BARE_COORD_PATTERN);
+      if (bareCoordMatch) {
+        lat = Number(bareCoordMatch[1]);
+        lon = Number(bareCoordMatch[2]);
+      } else {
+        name = query;
+      }
+    }
+  }
+
+  return { name, lat, lon };
 }
 
 interface AddressComponent {
