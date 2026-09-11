@@ -45,6 +45,7 @@ const timelineEntrySchema = z.object({
   title: z.string().min(1),
   note: z.string(),
   highlight: z.boolean(),
+  placeId: z.string().min(1).optional(),
 });
 
 const itineraryDaySchema = z.object({

@@ -82,6 +82,7 @@ interface TimelineEntryFields {
   title: string;
   note: string;
   highlight: boolean;
+  placeId: string | null;
 }
 
 function addItineraryDay(fields: ItineraryDayFields): Promise<Trip> {
@@ -444,6 +445,7 @@ function findTodayIndex(days: ItineraryDay[]): number {
 }
 
 export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (trip: Trip) => void }) {
+  const { settings } = useTrip();
   const [selected, setSelected] = useState(() => findTodayIndex(trip.itineraryDays));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -552,11 +554,13 @@ export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (
               )}
 
               <div className="timeline">
-                {sortedTimeline(day.timeline).map((entry) =>
-                  editingEntryId === entry.id ? (
+                {sortedTimeline(day.timeline).map((entry) => {
+                  const place = entry.placeId ? trip.places.find((candidate) => candidate.id === entry.placeId) : undefined;
+                  return editingEntryId === entry.id ? (
                     <TimelineEntryEditForm
                       key={entry.id}
                       entry={entry}
+                      places={trip.places}
                       pending={pending}
                       onSave={(patch) => handleSaveEntry(entry.id, patch)}
                       onCancel={() => setEditingEntryId(null)}
@@ -565,20 +569,36 @@ export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (
                     <div className="timeline-row" key={entry.id}>
                       <time>{entry.time}</time>
                       <i className={entry.highlight ? "accent" : ""} />
-                      <div><b>{entry.title}</b><span>{entry.note}</span></div>
+                      <div>
+                        <b>{entry.title}</b>
+                        <span>{entry.note}</span>
+                        {place &&
+                          (hasCoords(place) ? (
+                            <a
+                              className="timeline-place"
+                              href={placeMapsUrl(place, settings.mapProvider)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              📍 {place.name}
+                            </a>
+                          ) : (
+                            <span className="timeline-place">📍 {place.name}</span>
+                          ))}
+                      </div>
                       <div className="timeline-row-actions">
                         {entry.highlight && <em>Highlight</em>}
                         <button type="button" className="timeline-edit" aria-label={`${entry.title} bearbeiten`} onClick={() => setEditingEntryId(entry.id)} disabled={pending}>✎</button>
                         <button type="button" className="packing-remove" aria-label={`${entry.title} entfernen`} onClick={() => handleRemoveEntry(entry.id)} disabled={pending}>×</button>
                       </div>
                     </div>
-                  ),
-                )}
+                  );
+                })}
                 {day.timeline.length === 0 && !addingEntry && <p className="timeline-empty">Noch kein Tagesablauf für diesen Tag.</p>}
               </div>
 
               {addingEntry ? (
-                <TimelineAddForm pending={pending} onAdd={(fields) => handleAddEntry(day.id, fields)} onCancel={() => setAddingEntry(false)} />
+                <TimelineAddForm places={trip.places} pending={pending} onAdd={(fields) => handleAddEntry(day.id, fields)} onCancel={() => setAddingEntry(false)} />
               ) : (
                 <button type="button" className="timeline-add-toggle" onClick={() => setAddingEntry(true)} disabled={pending}>+ Eintrag hinzufügen</button>
               )}
@@ -649,11 +669,13 @@ function DayEditForm({
 
 function TimelineEntryEditForm({
   entry,
+  places,
   pending,
   onSave,
   onCancel,
 }: {
   entry: TimelineEntry;
+  places: Place[];
   pending: boolean;
   onSave: (fields: TimelineEntryFields) => void;
   onCancel: () => void;
@@ -662,11 +684,12 @@ function TimelineEntryEditForm({
   const [title, setTitle] = useState(entry.title);
   const [note, setNote] = useState(entry.note);
   const [highlight, setHighlight] = useState(entry.highlight);
+  const [placeId, setPlaceId] = useState(entry.placeId ?? "");
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!time.trim() || !title.trim()) return;
-    onSave({ time: time.trim(), title: title.trim(), note, highlight });
+    onSave({ time: time.trim(), title: title.trim(), note, highlight, placeId: placeId || null });
   };
 
   return (
@@ -674,6 +697,10 @@ function TimelineEntryEditForm({
       <input type="text" placeholder="Uhrzeit" value={time} onChange={(event) => setTime(event.target.value)} maxLength={16} disabled={pending} />
       <input type="text" placeholder="Titel" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={80} disabled={pending} />
       <input type="text" placeholder="Notiz" value={note} onChange={(event) => setNote(event.target.value)} maxLength={120} disabled={pending} />
+      <select className="timeline-place-select" value={placeId} onChange={(event) => setPlaceId(event.target.value)} disabled={pending} aria-label="Ort verknüpfen">
+        <option value="">Kein Ort verknüpft</option>
+        {places.map((place) => <option key={place.id} value={place.id}>{place.name}</option>)}
+      </select>
       <label className="timeline-highlight"><input type="checkbox" checked={highlight} onChange={(event) => setHighlight(event.target.checked)} disabled={pending} /> Highlight</label>
       <div className="timeline-edit-actions">
         <button type="button" className="day-edit-btn secondary" onClick={onCancel} disabled={pending}>Abbrechen</button>
@@ -684,10 +711,12 @@ function TimelineEntryEditForm({
 }
 
 function TimelineAddForm({
+  places,
   pending,
   onAdd,
   onCancel,
 }: {
+  places: Place[];
   pending: boolean;
   onAdd: (fields: TimelineEntryFields) => void;
   onCancel: () => void;
@@ -696,17 +725,19 @@ function TimelineAddForm({
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [highlight, setHighlight] = useState(false);
+  const [placeId, setPlaceId] = useState("");
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     const trimmedTime = time.trim();
     const trimmedTitle = title.trim();
     if (!trimmedTime || !trimmedTitle) return;
-    onAdd({ time: trimmedTime, title: trimmedTitle, note, highlight });
+    onAdd({ time: trimmedTime, title: trimmedTitle, note, highlight, placeId: placeId || null });
     setTime("");
     setTitle("");
     setNote("");
     setHighlight(false);
+    setPlaceId("");
   };
 
   return (
@@ -714,6 +745,10 @@ function TimelineAddForm({
       <input type="text" placeholder="Uhrzeit" value={time} onChange={(event) => setTime(event.target.value)} maxLength={16} disabled={pending} />
       <input type="text" placeholder="Titel" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={80} disabled={pending} />
       <input type="text" placeholder="Notiz" value={note} onChange={(event) => setNote(event.target.value)} maxLength={120} disabled={pending} />
+      <select className="timeline-place-select" value={placeId} onChange={(event) => setPlaceId(event.target.value)} disabled={pending} aria-label="Ort verknüpfen">
+        <option value="">Kein Ort verknüpft</option>
+        {places.map((place) => <option key={place.id} value={place.id}>{place.name}</option>)}
+      </select>
       <label className="timeline-highlight"><input type="checkbox" checked={highlight} onChange={(event) => setHighlight(event.target.checked)} disabled={pending} /> Highlight</label>
       <div className="timeline-edit-actions">
         <button type="button" className="day-edit-btn secondary" onClick={onCancel} disabled={pending}>Abbrechen</button>

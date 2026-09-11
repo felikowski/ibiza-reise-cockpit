@@ -440,6 +440,7 @@ export interface TimelineEntryFields {
   title: string;
   note: string;
   highlight: boolean;
+  placeId: string | null;
 }
 
 function assertTimelineEntryFields(fields: Partial<TimelineEntryFields>): void {
@@ -462,6 +463,9 @@ export async function addTimelineEntry(dayId: string, fields: TimelineEntryField
   if (day.timeline.length >= MAX_TIMELINE_ENTRIES_PER_DAY) {
     throw new TripValidationError(`Der Tagesablauf hat das Limit von ${MAX_TIMELINE_ENTRIES_PER_DAY} Einträgen erreicht.`);
   }
+  if (fields.placeId && !trip.places.some((place) => place.id === fields.placeId)) {
+    throw new TripValidationError(`Ort nicht gefunden: ${fields.placeId}`);
+  }
 
   day.timeline.push({
     id: randomUUID(),
@@ -469,6 +473,7 @@ export async function addTimelineEntry(dayId: string, fields: TimelineEntryField
     title: fields.title.trim(),
     note: fields.note.trim(),
     highlight: fields.highlight,
+    placeId: fields.placeId ?? undefined,
   });
   return writeTrip(trip);
 }
@@ -485,11 +490,15 @@ export async function updateTimelineEntry(entryId: string, patch: Partial<Timeli
   if (!entry) {
     throw new ItemNotFoundError(`Tagesablauf-Eintrag nicht gefunden: ${entryId}`);
   }
+  if (patch.placeId && !trip.places.some((place) => place.id === patch.placeId)) {
+    throw new TripValidationError(`Ort nicht gefunden: ${patch.placeId}`);
+  }
 
   if (patch.time !== undefined) entry.time = patch.time.trim();
   if (patch.title !== undefined) entry.title = patch.title.trim();
   if (patch.note !== undefined) entry.note = patch.note.trim();
   if (patch.highlight !== undefined) entry.highlight = patch.highlight;
+  if (patch.placeId !== undefined) entry.placeId = patch.placeId ?? undefined;
 
   return writeTrip(trip);
 }
@@ -587,6 +596,15 @@ export async function removePlace(placeId: string): Promise<Trip> {
     throw new ItemNotFoundError(`Ort nicht gefunden: ${placeId}`);
   }
   const [removed] = trip.places.splice(index, 1);
+
+  // A timeline entry that referenced this place would otherwise keep a
+  // dangling placeId once the place itself is gone.
+  for (const day of trip.itineraryDays) {
+    for (const entry of day.timeline) {
+      if (entry.placeId === placeId) entry.placeId = undefined;
+    }
+  }
+
   const updated = await writeTrip(trip);
 
   // Clean up the downloaded Google Places photo, if this place had one —
