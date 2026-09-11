@@ -78,3 +78,35 @@ export const currentUser: RequestHandler = (req, res) => {
     name: typeof user?.name === "string" ? user.name : null,
   });
 };
+
+// express-openid-connect finishes /auth/callback with an instant `res.redirect`
+// straight back into the app. That lands so fast after the password field was
+// submitted on Auth0's hosted login page that the browser's "save password"
+// prompt gets shown and then immediately dismissed by the next navigation,
+// before there's time to click it. Swapping that one redirect for a brief
+// self-redirecting HTML page gives the prompt a moment to actually be usable.
+// Must run before authMiddleware() so it wraps res.redirect first.
+export const delayCallbackRedirect: RequestHandler = (req, res, next) => {
+  if (req.path !== "/auth/callback") {
+    next();
+    return;
+  }
+  res.redirect = ((...args: unknown[]) => {
+    const target = String(args.length > 1 ? args[1] : args[0]);
+    res.status(200).type("html").send(callbackRedirectHtml(target));
+  }) as typeof res.redirect;
+  next();
+};
+
+function callbackRedirectHtml(target: string): string {
+  const forAttribute = target.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  const forScript = JSON.stringify(target).replace(/</g, "\\u003c");
+  return `<!doctype html>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="2;url=${forAttribute}">
+<title>Angemeldet</title>
+<body style="font: 14px system-ui, sans-serif; padding: 48px; color: #22322d;">
+  <p>Angemeldet — du wirst weitergeleitet …</p>
+  <script>setTimeout(function () { window.location.replace(${forScript}); }, 1200);</script>
+</body>`;
+}

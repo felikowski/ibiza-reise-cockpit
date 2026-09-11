@@ -226,7 +226,13 @@ function Chrome({ children }: { children: React.ReactNode }) {
           <span className="avatar avatar-two">+{trip.meta.travelersCount - 1}</span>
         </div>
 
-        <a className="session-logout" href="/auth/logout" title={user?.email ?? user?.name ?? undefined}>
+        {(user?.name || user?.email) && (
+          <span className="session-user" title={user?.email ?? undefined}>
+            {user.name ?? user.email}
+          </span>
+        )}
+
+        <a className="session-logout" href="/auth/logout">
           Abmelden
         </a>
       </header>
