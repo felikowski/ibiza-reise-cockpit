@@ -58,8 +58,15 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise
  * itself a google.com subdomain so it passes ALLOWED_HOSTS) instead of
  * redirecting straight to the place. It responds 200, not 3xx, so
  * resolveRedirect would otherwise stop there with nothing extractable.
- * This pre-accepted consent cookie makes Google skip that page. */
-const CONSENT_BYPASS_HEADERS = { Cookie: "CONSENT=YES+1", "User-Agent": "Mozilla/5.0" };
+ * This pre-accepted consent cookie makes Google skip that page. A full,
+ * realistic browser header set also helps avoid Google routing the request
+ * to a bot-check page instead of resolving it normally. */
+const CONSENT_BYPASS_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+  Cookie: "CONSENT=YES+cb.20240107-08-p0.de+FX+410",
+};
 
 /** Follows redirects one hop at a time (instead of letting fetch auto-follow
  * them) so every intermediate destination can be checked against
@@ -81,6 +88,19 @@ async function resolveRedirect(startUrl: string, allowedHosts: string[], headers
     current = next;
   }
   return current;
+}
+
+/** For the "couldn't read place data" error: names where the redirect chain
+ * actually ended (e.g. a still-unresolved consent.google.com hop, or a
+ * Google bot-check page), so a failed attempt is a diagnosis instead of a
+ * guess — without needing access to the server's own logs. */
+function describeLandingSpot(url: string): string {
+  try {
+    const landed = new URL(url);
+    return ` (gelandet auf: ${landed.hostname}${landed.pathname})`;
+  } catch {
+    return "";
+  }
 }
 
 const COORD_PATTERN = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
@@ -180,7 +200,8 @@ export async function resolveGoogleMapsLink(rawUrl: string, photosDir: string, p
       // hand back the coordinates and let the rest be filled in by hand.
       return { name: "", type: "", area: "", lat: hints.lat, lon: hints.lon, image: null };
     }
-    throw new PlacesApiError("Aus diesem Link konnten keine Ortsdaten gelesen werden. Bitte einen Link zu einem konkreten Ort verwenden (Maps → Teilen).", 400);
+    console.error("Google Maps link resolution landed on an unparsable page", { rawUrl, resolvedUrl });
+    throw new PlacesApiError(`Aus diesem Link konnten keine Ortsdaten gelesen werden${describeLandingSpot(resolvedUrl)}. Bitte einen Link zu einem konkreten Ort verwenden (Maps → Teilen).`, 400);
   }
 
   const searchBody: Record<string, unknown> = {
@@ -287,7 +308,8 @@ export async function resolveAppleMapsLink(rawUrl: string): Promise<PlaceSuggest
   const hints = extractAppleLinkHints(resolvedUrl);
 
   if (!hints.name && (hints.lat === undefined || hints.lon === undefined)) {
-    throw new PlacesApiError("Aus diesem Link konnten keine Ortsdaten gelesen werden. Bitte einen Link zu einem konkreten Ort verwenden (Karten → Teilen).", 400);
+    console.error("Apple Maps link resolution landed on an unparsable page", { rawUrl, resolvedUrl });
+    throw new PlacesApiError(`Aus diesem Link konnten keine Ortsdaten gelesen werden${describeLandingSpot(resolvedUrl)}. Bitte einen Link zu einem konkreten Ort verwenden (Karten → Teilen).`, 400);
   }
 
   return {
