@@ -46,6 +46,13 @@ export const requireLogin: RequestHandler = requiresAuth();
 // no code of its own to check a session. 200 lets the request through as-is,
 // anything else (a redirect to Auth0 login) is relayed to the browser by
 // Traefik instead of reaching nginx.
+//
+// The redirect must be an absolute URL: Traefik's forwardAuth resolves a
+// relative Location header from the auth check against the auth service's
+// own (internal, container-only) address instead of leaving it for the
+// browser to resolve against the page it's on — https://github.com/traefik/traefik/issues/11313.
+// A relative Location here sends real visitors to an unroutable
+// http://<container-name>:<port>/... URL.
 export const verifySession: RequestHandler = (req, res) => {
   if (req.oidc?.isAuthenticated()) {
     res.status(200).end();
@@ -53,7 +60,7 @@ export const verifySession: RequestHandler = (req, res) => {
   }
   const forwardedUri = req.header("x-forwarded-uri") ?? "/";
   const returnTo = forwardedUri.startsWith("/") && !forwardedUri.startsWith("//") ? forwardedUri : "/";
-  res.redirect(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
+  res.redirect(`${process.env.AUTH0_BASE_URL}/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
 };
 
 export const currentUser: RequestHandler = (req, res) => {
