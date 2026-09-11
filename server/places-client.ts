@@ -50,13 +50,21 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise
   }
 }
 
+/** Without a browser session, Google sometimes answers a Maps short link
+ * with an EU cookie-consent interstitial (served from consent.google.com,
+ * itself a google.com subdomain so it passes ALLOWED_HOSTS) instead of
+ * redirecting straight to the place. It responds 200, not 3xx, so
+ * resolveRedirect would otherwise stop there with nothing extractable.
+ * This pre-accepted consent cookie makes Google skip that page. */
+const CONSENT_BYPASS_HEADERS = { Cookie: "CONSENT=YES+1", "User-Agent": "Mozilla/5.0" };
+
 /** Follows redirects one hop at a time (instead of letting fetch auto-follow
  * them) so every intermediate destination can be checked against
  * ALLOWED_HOSTS before it's requested. */
 async function resolveRedirect(startUrl: string): Promise<string> {
   let current = startUrl;
   for (let i = 0; i < MAX_REDIRECTS; i++) {
-    const response = await fetchWithTimeout(current, { redirect: "manual" });
+    const response = await fetchWithTimeout(current, { redirect: "manual", headers: CONSENT_BYPASS_HEADERS });
     response.body?.cancel().catch(() => {});
     if (response.status < 300 || response.status >= 400) {
       return current;
