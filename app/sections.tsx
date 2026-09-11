@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { DayTone, ItineraryDay, PackingItem, Place, ShoppingItem, TimelineEntry, Trip } from "@/src/domain/trip";
 import {
   budgetGrandTotal,
@@ -667,6 +667,114 @@ function DayEditForm({
   );
 }
 
+const PLACE_COMBOBOX_MAX_RESULTS = 8;
+
+function PlaceCombobox({
+  places,
+  value,
+  onChange,
+  disabled,
+}: {
+  places: Place[];
+  value: string;
+  onChange: (placeId: string) => void;
+  disabled?: boolean;
+}) {
+  const listId = useId();
+  const selectedName = places.find((place) => place.id === value)?.name ?? "";
+  const [query, setQuery] = useState(selectedName);
+  const [syncedValue, setSyncedValue] = useState(value);
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Keeps the visible text in sync when the selection changes from outside
+  // (e.g. the form resets placeId after a successful save).
+  if (value !== syncedValue) {
+    setSyncedValue(value);
+    setQuery(selectedName);
+  }
+
+  const matches = query.trim()
+    ? places.filter((place) => place.name.toLowerCase().includes(query.trim().toLowerCase()))
+    : places;
+  const visible = matches.slice(0, PLACE_COMBOBOX_MAX_RESULTS);
+
+  const selectPlace = (place: Place) => {
+    onChange(place.id);
+    setQuery(place.name);
+    setOpen(false);
+  };
+
+  const clearPlace = () => {
+    onChange("");
+    setQuery("");
+    setOpen(false);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setOpen(true);
+      setActiveIndex((index) => Math.min(index + 1, visible.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setOpen(true);
+      setActiveIndex((index) => Math.max(index - 1, 0));
+    } else if (event.key === "Enter") {
+      if (open && visible[activeIndex]) {
+        event.preventDefault();
+        selectPlace(visible[activeIndex]);
+      }
+    } else if (event.key === "Escape") {
+      setOpen(false);
+      setQuery(places.find((place) => place.id === value)?.name ?? "");
+    }
+  };
+
+  return (
+    <div className="place-combobox">
+      <input
+        type="text"
+        className="place-combobox-input"
+        placeholder="Ort suchen…"
+        value={query}
+        onChange={(event) => { setQuery(event.target.value); setOpen(true); setActiveIndex(0); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => { setOpen(false); setQuery(places.find((place) => place.id === value)?.name ?? ""); }}
+        onKeyDown={handleKeyDown}
+        disabled={disabled}
+        aria-label="Ort verknüpfen"
+        role="combobox"
+        aria-expanded={open}
+        aria-autocomplete="list"
+        aria-controls={listId}
+      />
+      {open && (
+        <ul className="place-combobox-list" id={listId} role="listbox">
+          {visible.length === 0 && <li className="place-combobox-empty">Keine Treffer</li>}
+          {visible.map((place, index) => (
+            <li
+              key={place.id}
+              role="option"
+              aria-selected={place.id === value}
+              className={index === activeIndex ? "active" : ""}
+              onMouseDown={(event) => { event.preventDefault(); selectPlace(place); }}
+              onMouseEnter={() => setActiveIndex(index)}
+            >
+              {place.name}
+            </li>
+          ))}
+          {value && (
+            <li className="place-combobox-clear" onMouseDown={(event) => { event.preventDefault(); clearPlace(); }}>
+              × Verknüpfung entfernen
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function TimelineEntryEditForm({
   entry,
   places,
@@ -697,10 +805,7 @@ function TimelineEntryEditForm({
       <input type="text" placeholder="Uhrzeit" value={time} onChange={(event) => setTime(event.target.value)} maxLength={16} disabled={pending} />
       <input type="text" placeholder="Titel" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={80} disabled={pending} />
       <input type="text" placeholder="Notiz" value={note} onChange={(event) => setNote(event.target.value)} maxLength={120} disabled={pending} />
-      <select className="timeline-place-select" value={placeId} onChange={(event) => setPlaceId(event.target.value)} disabled={pending} aria-label="Ort verknüpfen">
-        <option value="">Kein Ort verknüpft</option>
-        {places.map((place) => <option key={place.id} value={place.id}>{place.name}</option>)}
-      </select>
+      <PlaceCombobox places={places} value={placeId} onChange={setPlaceId} disabled={pending} />
       <label className="timeline-highlight"><input type="checkbox" checked={highlight} onChange={(event) => setHighlight(event.target.checked)} disabled={pending} /> Highlight</label>
       <div className="timeline-edit-actions">
         <button type="button" className="day-edit-btn secondary" onClick={onCancel} disabled={pending}>Abbrechen</button>
@@ -745,10 +850,7 @@ function TimelineAddForm({
       <input type="text" placeholder="Uhrzeit" value={time} onChange={(event) => setTime(event.target.value)} maxLength={16} disabled={pending} />
       <input type="text" placeholder="Titel" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={80} disabled={pending} />
       <input type="text" placeholder="Notiz" value={note} onChange={(event) => setNote(event.target.value)} maxLength={120} disabled={pending} />
-      <select className="timeline-place-select" value={placeId} onChange={(event) => setPlaceId(event.target.value)} disabled={pending} aria-label="Ort verknüpfen">
-        <option value="">Kein Ort verknüpft</option>
-        {places.map((place) => <option key={place.id} value={place.id}>{place.name}</option>)}
-      </select>
+      <PlaceCombobox places={places} value={placeId} onChange={setPlaceId} disabled={pending} />
       <label className="timeline-highlight"><input type="checkbox" checked={highlight} onChange={(event) => setHighlight(event.target.checked)} disabled={pending} /> Highlight</label>
       <div className="timeline-edit-actions">
         <button type="button" className="day-edit-btn secondary" onClick={onCancel} disabled={pending}>Abbrechen</button>
