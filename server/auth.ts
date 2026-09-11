@@ -29,6 +29,14 @@ export function authMiddleware() {
     clientID: process.env.AUTH0_CLIENT_ID,
     clientSecret: process.env.AUTH0_CLIENT_SECRET,
     issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
+    // The library defaults to the implicit flow (response_type: 'id_token'),
+    // which a Regular Web Application's default Auth0 grant types don't
+    // allow. This is a confidential client with a client secret, so use the
+    // Authorization Code flow instead.
+    authorizationParams: {
+      response_type: "code",
+      scope: "openid profile email",
+    },
     routes: {
       login: "/auth/login",
       logout: "/auth/logout",
