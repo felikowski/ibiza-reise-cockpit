@@ -1,6 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import { adminPageHtml } from "./admin-page";
-import { PlacesApiError, resolveGoogleMapsLink } from "./places-client";
+import { PlacesApiError, resolveAppleMapsLink, resolveGoogleMapsLink } from "./places-client";
 import {
   addItineraryDay,
   addPackingItem,
@@ -489,6 +489,28 @@ async function main() {
         return;
       }
       const suggestion = await resolveGoogleMapsLink(url.trim(), PLACE_PHOTOS_DIR, PLACE_PHOTOS_PUBLIC_PATH);
+      res.json({ ok: true, suggestion });
+    } catch (error) {
+      if (error instanceof PlacesApiError) {
+        res.status(error.status).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  app.post("/api/places/resolve-apple-link", express.json({ limit: "10kb" }), async (req, res) => {
+    try {
+      const { url } = req.body ?? {};
+      if (typeof url !== "string" || url.trim().length < 1) {
+        res.status(400).json({ error: "url ist erforderlich." });
+        return;
+      }
+      if (isRateLimited(req.ip ?? "unknown")) {
+        res.status(429).json({ error: "Zu viele Anfragen. Bitte kurz warten und erneut versuchen." });
+        return;
+      }
+      const suggestion = await resolveAppleMapsLink(url.trim());
       res.json({ ok: true, suggestion });
     } catch (error) {
       if (error instanceof PlacesApiError) {

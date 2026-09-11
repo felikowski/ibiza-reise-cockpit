@@ -1,8 +1,10 @@
-/** Resolves a pasted Google Maps link into place details (name, category,
- * area, coordinates, photo) via the Places API (New), so the Entdecken
- * "add place" form can prefill itself instead of everything being typed by
- * hand. Requires GOOGLE_PLACES_API_KEY; the caller decides how to react if
- * it's unset (see server/index.ts). */
+/** Resolves a pasted Google Maps or Apple Maps link into place details, so
+ * the Entdecken "add place" form can prefill itself instead of everything
+ * being typed by hand. The Google path goes through the Places API (New)
+ * for category/area/photo and requires GOOGLE_PLACES_API_KEY (the caller
+ * decides how to react if it's unset, see server/index.ts); Apple Maps has
+ * no equivalent lookup available here, so that path only reads what the
+ * share link's own URL parameters carry (name, coordinates, address). */
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -13,14 +15,15 @@ const MAX_REDIRECTS = 5;
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 
 /** Only these hosts (or their subdomains) are ever fetched — both the
- * pasted link and every redirect hop are checked against this list before
- * the next request is made, so a crafted short link can't turn this
+ * pasted link and every redirect hop are checked against the relevant list
+ * before the next request is made, so a crafted short link can't turn this
  * endpoint into an open proxy for arbitrary internal/external URLs. */
-const ALLOWED_HOSTS = ["goo.gl", "google.com", "google.de", "google.es", "google.at", "google.co.uk", "google.fr", "google.it"];
+const GOOGLE_ALLOWED_HOSTS = ["goo.gl", "google.com", "google.de", "google.es", "google.at", "google.co.uk", "google.fr", "google.it"];
+const APPLE_ALLOWED_HOSTS = ["apple.com", "maps.apple"];
 
-function isAllowedHost(hostname: string): boolean {
+function isAllowedHost(hostname: string, allowedHosts: string[]): boolean {
   const host = hostname.toLowerCase();
-  return ALLOWED_HOSTS.some((base) => host === base || host.endsWith(`.${base}`));
+  return allowedHosts.some((base) => host === base || host.endsWith(`.${base}`));
 }
 
 export class PlacesApiError extends Error {
@@ -60,11 +63,11 @@ const CONSENT_BYPASS_HEADERS = { Cookie: "CONSENT=YES+1", "User-Agent": "Mozilla
 
 /** Follows redirects one hop at a time (instead of letting fetch auto-follow
  * them) so every intermediate destination can be checked against
- * ALLOWED_HOSTS before it's requested. */
-async function resolveRedirect(startUrl: string): Promise<string> {
+ * allowedHosts before it's requested. */
+async function resolveRedirect(startUrl: string, allowedHosts: string[], headers: Record<string, string> = {}): Promise<string> {
   let current = startUrl;
   for (let i = 0; i < MAX_REDIRECTS; i++) {
-    const response = await fetchWithTimeout(current, { redirect: "manual", headers: CONSENT_BYPASS_HEADERS });
+    const response = await fetchWithTimeout(current, { redirect: "manual", headers });
     response.body?.cancel().catch(() => {});
     if (response.status < 300 || response.status >= 400) {
       return current;
@@ -72,7 +75,7 @@ async function resolveRedirect(startUrl: string): Promise<string> {
     const location = response.headers.get("location");
     if (!location) return current;
     const next = new URL(location, current).toString();
-    if (!isAllowedHost(new URL(next).hostname)) {
+    if (!isAllowedHost(new URL(next).hostname, allowedHosts)) {
       throw new PlacesApiError("Der Link verweist auf eine nicht unterstützte Adresse.", 400);
     }
     current = next;
@@ -164,11 +167,11 @@ export async function resolveGoogleMapsLink(rawUrl: string, photosDir: string, p
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
     throw new PlacesApiError("Bitte einen Google-Maps-Link einfügen.", 400);
   }
-  if (!isAllowedHost(parsed.hostname)) {
+  if (!isAllowedHost(parsed.hostname, GOOGLE_ALLOWED_HOSTS)) {
     throw new PlacesApiError("Bitte einen Google-Maps-Link einfügen.", 400);
   }
 
-  const resolvedUrl = await resolveRedirect(rawUrl);
+  const resolvedUrl = await resolveRedirect(rawUrl, GOOGLE_ALLOWED_HOSTS, CONSENT_BYPASS_HEADERS);
   const hints = extractLinkHints(resolvedUrl);
 
   if (!hints.name) {
@@ -229,5 +232,70 @@ export async function resolveGoogleMapsLink(rawUrl: string, photosDir: string, p
     lat: place.location?.latitude ?? hints.lat ?? 0,
     lon: place.location?.longitude ?? hints.lon ?? 0,
     image,
+  };
+}
+
+/** Apple Maps share links carry the place's name, coordinates and address
+ * as plain URL parameters, unlike Google's opaque short links — so there's
+ * no equivalent of the Places API lookup to call here, just this link's own
+ * query string once redirects are followed. */
+function extractAppleLinkHints(url: string): { name?: string; lat?: number; lon?: number; area?: string } {
+  let params: URLSearchParams;
+  try {
+    params = new URL(url).searchParams;
+  } catch {
+    return {};
+  }
+
+  const name = params.get("name") ?? params.get("q") ?? undefined;
+
+  const coordinate = params.get("coordinate") ?? params.get("ll") ?? params.get("sll") ?? undefined;
+  let lat: number | undefined;
+  let lon: number | undefined;
+  if (coordinate) {
+    const [latPart, lonPart] = coordinate.split(",").map((part) => part.trim());
+    const parsedLat = Number(latPart);
+    const parsedLon = Number(lonPart);
+    if (Number.isFinite(parsedLat) && Number.isFinite(parsedLon)) {
+      lat = parsedLat;
+      lon = parsedLon;
+    }
+  }
+
+  const address = params.get("address") ?? undefined;
+  const addressParts = address?.split(",").map((part) => part.trim()).filter(Boolean) ?? [];
+  const area = addressParts[1] ?? addressParts[0];
+
+  return { name, lat, lon, area };
+}
+
+export async function resolveAppleMapsLink(rawUrl: string): Promise<PlaceSuggestion> {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new PlacesApiError("Das ist kein gültiger Link.", 400);
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    throw new PlacesApiError("Bitte einen Apple-Karten-Link einfügen.", 400);
+  }
+  if (!isAllowedHost(parsed.hostname, APPLE_ALLOWED_HOSTS)) {
+    throw new PlacesApiError("Bitte einen Apple-Karten-Link einfügen.", 400);
+  }
+
+  const resolvedUrl = await resolveRedirect(rawUrl, APPLE_ALLOWED_HOSTS);
+  const hints = extractAppleLinkHints(resolvedUrl);
+
+  if (!hints.name && (hints.lat === undefined || hints.lon === undefined)) {
+    throw new PlacesApiError("Aus diesem Link konnten keine Ortsdaten gelesen werden. Bitte einen Link zu einem konkreten Ort verwenden (Karten → Teilen).", 400);
+  }
+
+  return {
+    name: hints.name ?? "",
+    type: "",
+    area: hints.area ?? "",
+    lat: hints.lat ?? 0,
+    lon: hints.lon ?? 0,
+    image: null,
   };
 }
