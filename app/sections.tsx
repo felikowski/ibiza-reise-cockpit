@@ -393,8 +393,24 @@ const DAY_TONE_OPTIONS: { value: DayTone; label: string }[] = [
 
 const NEW_DAY_DRAFT: ItineraryDay = { id: "", weekday: "", dateLabel: "", title: "", note: "", tone: "sun", timeline: [] };
 
+const GERMAN_MONTH_ABBREVIATIONS = ["jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "dez"];
+
+function isDateLabelToday(dateLabel: string, now: Date): boolean {
+  const match = dateLabel.match(/(\d{1,2})\.\s*([A-Za-zÄäÖöÜü]{3,})/);
+  if (!match) return false;
+  const day = parseInt(match[1], 10);
+  const month = GERMAN_MONTH_ABBREVIATIONS.indexOf(match[2].toLowerCase().replace("ä", "a").slice(0, 3));
+  return month !== -1 && day === now.getDate() && month === now.getMonth();
+}
+
+function findTodayIndex(days: ItineraryDay[]): number {
+  const now = new Date();
+  const index = days.findIndex((day) => isDateLabelToday(day.dateLabel, now));
+  return index === -1 ? 0 : index;
+}
+
 export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (trip: Trip) => void }) {
-  const [selected, setSelected] = useState(0);
+  const [selected, setSelected] = useState(() => findTodayIndex(trip.itineraryDays));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingDay, setEditingDay] = useState(false);
