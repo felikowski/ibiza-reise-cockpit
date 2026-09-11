@@ -83,8 +83,10 @@ export const currentUser: RequestHandler = (req, res) => {
 // straight back into the app. That lands so fast after the password field was
 // submitted on Auth0's hosted login page that the browser's "save password"
 // prompt gets shown and then immediately dismissed by the next navigation,
-// before there's time to click it. Swapping that one redirect for a brief
-// self-redirecting HTML page gives the prompt a moment to actually be usable.
+// before there's time to click it. A fixed short delay before auto-redirecting
+// turned out to still be fast enough to dismiss it, so this waits for an
+// explicit click instead — nothing navigates the page away on its own, which
+// gives the save-password prompt as long as it needs to actually be used.
 // Must run before authMiddleware() so it wraps res.redirect first.
 export const delayCallbackRedirect: RequestHandler = (req, res, next) => {
   if (req.path !== "/auth/callback") {
@@ -103,10 +105,15 @@ function callbackRedirectHtml(target: string): string {
   const forScript = JSON.stringify(target).replace(/</g, "\\u003c");
   return `<!doctype html>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="2;url=${forAttribute}">
 <title>Angemeldet</title>
-<body style="font: 14px system-ui, sans-serif; padding: 48px; color: #22322d;">
-  <p>Angemeldet — du wirst weitergeleitet …</p>
-  <script>setTimeout(function () { window.location.replace(${forScript}); }, 1200);</script>
+<body style="margin:0; min-height:100vh; display:grid; place-items:center; font-family: system-ui, sans-serif; background: #f4f1ea; color: #22322d;">
+  <div style="text-align:center; max-width: 320px; padding: 24px;">
+    <p style="margin: 0 0 18px; font-size: 14px; color: #718079;">Angemeldet. Falls dein Browser gerade anbietet, das Passwort zu speichern, kannst du das jetzt in Ruhe tun.</p>
+    <a href="${forAttribute}" id="continue-link" style="display:inline-block; border:1px solid #dedbd2; background:#fffdf8; color:#22322d; padding:10px 22px; border-radius:99px; font-size:13px; font-weight:700; text-decoration:none;">Weiter zur App</a>
+  </div>
+  <script>document.getElementById("continue-link").addEventListener("click", function (event) {
+    event.preventDefault();
+    window.location.replace(${forScript});
+  });</script>
 </body>`;
 }
