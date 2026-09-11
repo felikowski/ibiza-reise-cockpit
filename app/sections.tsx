@@ -24,8 +24,8 @@ import {
 import { parseISODate } from "@/src/domain/dates";
 import type { DailyWeather } from "@/src/domain/open-meteo";
 import { describeWeatherCode } from "@/src/domain/weather-codes";
-import DiscoverMap, { googleMapsUrl } from "./discover-map";
-import type { TabId, WeatherState } from "./app-shell";
+import DiscoverMap, { placeMapsUrl } from "./discover-map";
+import { useTrip, type TabId, type WeatherState } from "./app-shell";
 
 async function submitTripRequest(url: string, method: string, body?: unknown): Promise<Trip> {
   const response = await fetch(url, {
@@ -801,6 +801,7 @@ const PLACE_COLOR_OPTIONS: { value: string; label: string }[] = [
 const NEW_PLACE_DRAFT: Place = { id: "", name: "", type: "", area: "", note: "", color: PLACE_COLOR_OPTIONS[0].value };
 
 export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (trip: Trip) => void }) {
+  const { settings } = useTrip();
   const [filter, setFilter] = useState("Alle");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -852,7 +853,7 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
       <div className="filter-row">{filterOptions.map((item) => <button key={item} onClick={() => setFilter(item)} className={filter === item ? "active" : ""}>{item}</button>)}</div>
       {error && <p className="packing-error">{error}</p>}
       <div className="places-layout">
-        <DiscoverMap home={home} places={visible} />
+        <DiscoverMap home={home} places={visible} mapProvider={settings.mapProvider} />
         <div className="place-grid">
           {adding ? (
             <PlaceEditForm
@@ -887,7 +888,15 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
                   <div><small>{place.type} · {place.area}</small><h2>{place.name}</h2><p>{place.note}</p></div>
                   <div className="place-card-actions">
                     {hasCoords(place) ? (
-                      <a className="place-open" href={googleMapsUrl(place)} target="_blank" rel="noopener noreferrer" aria-label={`${place.name} in Google Maps öffnen`}>↗</a>
+                      <a
+                        className="place-open"
+                        href={placeMapsUrl(place, settings.mapProvider)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${place.name} in ${settings.mapProvider === "apple" ? "Apple Karten" : "Google Maps"} öffnen`}
+                      >
+                        ↗
+                      </a>
                     ) : (
                       <span className="place-open place-open-disabled" aria-hidden="true">↗</span>
                     )}

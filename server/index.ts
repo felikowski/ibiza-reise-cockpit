@@ -2,6 +2,8 @@ import express from "express";
 import { adminPageHtml } from "./admin-page";
 import { authMiddleware, currentUser, delayCallbackRedirect, isAuthConfigured, requireLogin, verifySession } from "./auth";
 import { PlacesApiError, resolveAppleMapsLink, resolveGoogleMapsLink } from "./places-client";
+import { readUserSettings, updateUserSettings } from "./settings-store";
+import { isMapProvider } from "../src/domain/user-settings";
 import {
   addItineraryDay,
   addPackingItem,
@@ -86,6 +88,39 @@ async function main() {
     try {
       const trip = await readTrip();
       res.json(trip);
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  app.get("/api/settings", async (req, res) => {
+    const userId = req.oidc?.user?.sub;
+    if (typeof userId !== "string") {
+      res.status(401).json({ error: "Nicht angemeldet." });
+      return;
+    }
+    try {
+      const settings = await readUserSettings(userId);
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
+    }
+  });
+
+  app.patch("/api/settings", express.json({ limit: "10kb" }), async (req, res) => {
+    const userId = req.oidc?.user?.sub;
+    if (typeof userId !== "string") {
+      res.status(401).json({ error: "Nicht angemeldet." });
+      return;
+    }
+    const { mapProvider } = req.body ?? {};
+    if (mapProvider !== undefined && !isMapProvider(mapProvider)) {
+      res.status(400).json({ error: "mapProvider muss 'google' oder 'apple' sein." });
+      return;
+    }
+    try {
+      const settings = await updateUserSettings(userId, mapProvider !== undefined ? { mapProvider } : {});
+      res.json(settings);
     } catch (error) {
       res.status(500).json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" });
     }

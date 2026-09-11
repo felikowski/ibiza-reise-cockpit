@@ -1,12 +1,13 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Trip } from "@/src/domain/trip";
 import { validateTrip } from "@/src/domain/validate-trip";
 import { addDays, formatISODate, parseISODate } from "@/src/domain/dates";
 import { fetchLocationWeather, type DailyWeather } from "@/src/domain/open-meteo";
+import { DEFAULT_USER_SETTINGS, type MapProvider, type UserSettings } from "@/src/domain/user-settings";
 
 export type TabId =
   | "overview"
@@ -58,6 +59,8 @@ interface TripContextValue {
   copied: string | null;
   copyReference: (reference: string) => void;
   user: SessionUser | null;
+  settings: UserSettings;
+  setMapProvider: (provider: MapProvider) => void;
 }
 
 const TripContext = createContext<TripContextValue | null>(null);
@@ -129,6 +132,7 @@ function TripShell({ initialTrip, children }: { initialTrip: Trip; children: Rea
   const [copied, setCopied] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherState>({ status: "loading" });
   const [user, setUser] = useState<SessionUser | null>(null);
+  const [settings, setSettings] = useState<UserSettings>(DEFAULT_USER_SETTINGS);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,11 +148,34 @@ function TripShell({ initialTrip, children }: { initialTrip: Trip; children: Rea
       }
     }
 
+    async function loadSettings() {
+      try {
+        const response = await fetch("/api/settings", { cache: "no-store" });
+        if (!response.ok) return;
+        const json = await response.json();
+        if (!cancelled) setSettings({ ...DEFAULT_USER_SETTINGS, ...json });
+      } catch {
+        // Falls back to the default map provider; not worth blocking the UI on.
+      }
+    }
+
     loadUser();
+    loadSettings();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const setMapProvider = (mapProvider: MapProvider) => {
+    setSettings((previous) => ({ ...previous, mapProvider }));
+    fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mapProvider }),
+    }).catch(() => {
+      // Optimistic update stays in place; the next load re-syncs from the server.
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -184,15 +211,29 @@ function TripShell({ initialTrip, children }: { initialTrip: Trip; children: Rea
   };
 
   return (
-    <TripContext.Provider value={{ trip, setTrip, weather, copied, copyReference, user }}>
+    <TripContext.Provider value={{ trip, setTrip, weather, copied, copyReference, user, settings, setMapProvider }}>
       <Chrome>{children}</Chrome>
     </TripContext.Provider>
   );
 }
 
 function Chrome({ children }: { children: React.ReactNode }) {
-  const { trip, user } = useTrip();
+  const { trip, user, settings, setMapProvider } = useTrip();
   const pathname = usePathname();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setSettingsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [settingsOpen]);
+
   const activeTab = tabForPath(pathname);
   const activeLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? "Übersicht";
 
@@ -231,6 +272,41 @@ function Chrome({ children }: { children: React.ReactNode }) {
             {user.name ?? user.email}
           </span>
         )}
+
+        <div className="settings-menu" ref={settingsRef}>
+          <button
+            type="button"
+            className="settings-toggle"
+            aria-label="Einstellungen"
+            aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen((open) => !open)}
+          >
+            ⚙
+          </button>
+          {settingsOpen && (
+            <div className="settings-panel" role="menu">
+              <p className="settings-panel-title">Karten-App für „Entdecken“</p>
+              <label className="settings-option">
+                <input
+                  type="radio"
+                  name="mapProvider"
+                  checked={settings.mapProvider === "google"}
+                  onChange={() => setMapProvider("google")}
+                />
+                Google Maps
+              </label>
+              <label className="settings-option">
+                <input
+                  type="radio"
+                  name="mapProvider"
+                  checked={settings.mapProvider === "apple"}
+                  onChange={() => setMapProvider("apple")}
+                />
+                Apple Karten
+              </label>
+            </div>
+          )}
+        </div>
 
         <a className="session-logout" href="/auth/logout">
           Abmelden
