@@ -1,5 +1,6 @@
-import express, { type NextFunction, type Request, type Response } from "express";
+import express from "express";
 import { adminPageHtml } from "./admin-page";
+import { authMiddleware, currentUser, isAuthConfigured, requireLogin, verifySession } from "./auth";
 import { PlacesApiError, resolveAppleMapsLink, resolveGoogleMapsLink } from "./places-client";
 import {
   addItineraryDay,
@@ -27,8 +28,6 @@ import {
 } from "./trip-store";
 
 const PORT = Number(process.env.PORT ?? 4000);
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const DAY_TONES = ["sun", "water", "peach", "sage", "stone"] as const;
 
 // Resolving a Maps link triggers a billed Google Places API call, and this
@@ -47,28 +46,6 @@ function isRateLimited(key: string): boolean {
   return hits.length > RESOLVE_LINK_LIMIT_PER_HOUR;
 }
 
-function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
-  if (!ADMIN_USERNAME || !ADMIN_PASSWORD) {
-    res.status(503).send("Admin-Zugang ist nicht konfiguriert (ADMIN_USERNAME/ADMIN_PASSWORD fehlen).");
-    return;
-  }
-
-  const header = req.headers.authorization;
-  const [scheme, encoded] = header?.split(" ") ?? [];
-  const decoded = scheme === "Basic" && encoded ? Buffer.from(encoded, "base64").toString("utf8") : "";
-  const separatorIndex = decoded.indexOf(":");
-  const user = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : "";
-  const pass = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : "";
-
-  if (user === ADMIN_USERNAME && pass === ADMIN_PASSWORD) {
-    next();
-    return;
-  }
-
-  res.set("WWW-Authenticate", 'Basic realm="Ibiza Reise-Cockpit Admin"');
-  res.status(401).send("Authentifizierung erforderlich.");
-}
-
 async function main() {
   await ensureSeeded();
 
@@ -79,6 +56,28 @@ async function main() {
   app.set("trust proxy", true);
 
   app.get("/healthz", (_req, res) => res.type("text").send("ok"));
+
+  if (!isAuthConfigured()) {
+    // Fail closed, same spirit as the old Basic-Auth 503: nothing but
+    // /healthz works until AUTH0_* is set, rather than silently allowing
+    // unauthenticated access to the whole cockpit.
+    app.use((_req, res) => {
+      res
+        .status(503)
+        .send(
+          "Auth0 ist nicht konfiguriert (AUTH0_SECRET/AUTH0_BASE_URL/AUTH0_CLIENT_ID/AUTH0_CLIENT_SECRET/AUTH0_ISSUER_BASE_URL fehlen).",
+        );
+    });
+    app.listen(PORT, () => {
+      console.log(`ibiza-cockpit api listening on :${PORT} (auth not configured)`);
+    });
+    return;
+  }
+
+  app.use(authMiddleware());
+  app.get("/auth/verify", verifySession);
+  app.get("/auth/me", currentUser);
+  app.use(requireLogin);
 
   app.use(PLACE_PHOTOS_PUBLIC_PATH, express.static(PLACE_PHOTOS_DIR));
 
@@ -521,11 +520,11 @@ async function main() {
     }
   });
 
-  app.get("/admin", requireAdminAuth, (_req, res) => {
+  app.get("/admin", (_req, res) => {
     res.type("html").send(adminPageHtml);
   });
 
-  app.post("/admin/api/trip", requireAdminAuth, express.json({ limit: "1mb" }), async (req, res) => {
+  app.post("/admin/api/trip", express.json({ limit: "1mb" }), async (req, res) => {
     try {
       const trip = await writeTrip(req.body);
       res.json({ ok: true, trip });

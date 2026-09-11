@@ -11,7 +11,12 @@ services:
       - traefik.http.routers.ibiza-cockpit.rule=Host(`ibiza.srv1115517.hstgr.cloud`)
       - traefik.http.routers.ibiza-cockpit.entrypoints=websecure
       - traefik.http.routers.ibiza-cockpit.tls.certresolver=mytlschallenge
+      - traefik.http.routers.ibiza-cockpit.middlewares=ibiza-cockpit-auth
       - traefik.http.services.ibiza-cockpit.loadbalancer.server.port=80
+      # The static frontend has no code of its own to check a session, so
+      # every request is forwarded to the api container's /auth/verify first
+      # (Auth0 login via express-openid-connect); only a 200 lets it through.
+      - traefik.http.middlewares.ibiza-cockpit-auth.forwardauth.address=http://ibiza-cockpit-api:4000/auth/verify
 
   ibiza-cockpit-api:
     image: ghcr.io/felikowski/ibiza-reise-cockpit-api:main
@@ -26,7 +31,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=root_default
-      - traefik.http.routers.ibiza-cockpit-api.rule=Host(`ibiza.srv1115517.hstgr.cloud`) && (PathPrefix(`/api`) || PathPrefix(`/admin`))
+      - traefik.http.routers.ibiza-cockpit-api.rule=Host(`ibiza.srv1115517.hstgr.cloud`) && (PathPrefix(`/api`) || PathPrefix(`/admin`) || PathPrefix(`/auth`))
       - traefik.http.routers.ibiza-cockpit-api.entrypoints=websecure
       - traefik.http.routers.ibiza-cockpit-api.tls.certresolver=mytlschallenge
       - traefik.http.services.ibiza-cockpit-api.loadbalancer.server.port=4000

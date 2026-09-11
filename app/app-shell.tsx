@@ -49,12 +49,15 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; trip: Trip };
 
+export type SessionUser = { email: string | null; name: string | null };
+
 interface TripContextValue {
   trip: Trip;
   setTrip: (trip: Trip) => void;
   weather: WeatherState;
   copied: string | null;
   copyReference: (reference: string) => void;
+  user: SessionUser | null;
 }
 
 const TripContext = createContext<TripContextValue | null>(null);
@@ -125,6 +128,27 @@ function TripShell({ initialTrip, children }: { initialTrip: Trip; children: Rea
   const [trip, setTrip] = useState<Trip>(initialTrip);
   const [copied, setCopied] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherState>({ status: "loading" });
+  const [user, setUser] = useState<SessionUser | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadUser() {
+      try {
+        const response = await fetch("/auth/me", { cache: "no-store" });
+        if (!response.ok) return;
+        const json = await response.json();
+        if (!cancelled) setUser({ email: json.email ?? null, name: json.name ?? null });
+      } catch {
+        // Session info is a nice-to-have for the header; ignore failures.
+      }
+    }
+
+    loadUser();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -160,14 +184,14 @@ function TripShell({ initialTrip, children }: { initialTrip: Trip; children: Rea
   };
 
   return (
-    <TripContext.Provider value={{ trip, setTrip, weather, copied, copyReference }}>
+    <TripContext.Provider value={{ trip, setTrip, weather, copied, copyReference, user }}>
       <Chrome>{children}</Chrome>
     </TripContext.Provider>
   );
 }
 
 function Chrome({ children }: { children: React.ReactNode }) {
-  const { trip } = useTrip();
+  const { trip, user } = useTrip();
   const pathname = usePathname();
   const activeTab = tabForPath(pathname);
   const activeLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? "Übersicht";
@@ -201,6 +225,10 @@ function Chrome({ children }: { children: React.ReactNode }) {
           <span className="avatar avatar-one">F</span>
           <span className="avatar avatar-two">+{trip.meta.travelersCount - 1}</span>
         </div>
+
+        <a className="session-logout" href="/auth/logout" title={user?.email ?? user?.name ?? undefined}>
+          Abmelden
+        </a>
       </header>
 
       <div className="mobile-section-title">{activeLabel}</div>
