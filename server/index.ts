@@ -1,6 +1,6 @@
 import express from "express";
 import { adminPageHtml } from "./admin-page";
-import { authMiddleware, currentUser, isAuthConfigured, requireLogin, verifySession } from "./auth";
+import { authMiddleware, currentUser, delayCallbackRedirect, isAuthConfigured, requireLogin, verifySession } from "./auth";
 import { PlacesApiError, resolveAppleMapsLink, resolveGoogleMapsLink } from "./places-client";
 import {
   addItineraryDay,
@@ -74,6 +74,7 @@ async function main() {
     return;
   }
 
+  app.use(delayCallbackRedirect);
   app.use(authMiddleware());
   app.get("/auth/verify", verifySession);
   app.get("/auth/me", currentUser);
