@@ -832,6 +832,18 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
       <div className="places-layout">
         <DiscoverMap home={home} places={visible} />
         <div className="place-grid">
+          {adding ? (
+            <PlaceEditForm
+              place={NEW_PLACE_DRAFT}
+              pending={pending}
+              submitLabel="Ort anlegen"
+              heading="Neuer Ort"
+              onSave={handleAdd}
+              onCancel={() => setAdding(false)}
+            />
+          ) : (
+            <button type="button" className="place-add-toggle place-add-toggle-sticky" onClick={() => { setAdding(true); setEditingId(null); }} disabled={pending}>+ Ort hinzufügen</button>
+          )}
           {visible.map((place, index) =>
             editingId === place.id ? (
               <PlaceEditForm
@@ -871,18 +883,6 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
                 </div>
               </article>
             ),
-          )}
-          {adding ? (
-            <PlaceEditForm
-              place={NEW_PLACE_DRAFT}
-              pending={pending}
-              submitLabel="Ort anlegen"
-              heading="Neuer Ort"
-              onSave={handleAdd}
-              onCancel={() => setAdding(false)}
-            />
-          ) : (
-            <button type="button" className="place-add-toggle" onClick={() => { setAdding(true); setEditingId(null); }} disabled={pending}>+ Ort hinzufügen</button>
           )}
         </div>
       </div>
