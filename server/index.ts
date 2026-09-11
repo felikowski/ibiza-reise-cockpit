@@ -342,12 +342,18 @@ async function main() {
 
   app.post("/api/itinerary/days/:id/timeline", itineraryJson, async (req, res) => {
     try {
-      const { time, title, note, highlight } = req.body ?? {};
-      if (typeof time !== "string" || typeof title !== "string" || typeof note !== "string" || typeof highlight !== "boolean") {
-        res.status(400).json({ error: "time, title, note und highlight sind erforderlich." });
+      const { time, title, note, highlight, placeId } = req.body ?? {};
+      if (
+        typeof time !== "string" ||
+        typeof title !== "string" ||
+        typeof note !== "string" ||
+        typeof highlight !== "boolean" ||
+        (placeId !== undefined && placeId !== null && typeof placeId !== "string")
+      ) {
+        res.status(400).json({ error: "time, title, note und highlight sind erforderlich; placeId ist optional." });
         return;
       }
-      const trip = await addTimelineEntry(req.params.id, { time, title, note, highlight });
+      const trip = await addTimelineEntry(req.params.id, { time, title, note, highlight, placeId: placeId ?? null });
       res.json({ ok: true, trip });
     } catch (error) {
       if (error instanceof ItemNotFoundError) {
@@ -364,8 +370,8 @@ async function main() {
 
   app.patch("/api/itinerary/timeline/:id", itineraryJson, async (req, res) => {
     try {
-      const { time, title, note, highlight } = req.body ?? {};
-      const patch: Partial<{ time: string; title: string; note: string; highlight: boolean }> = {};
+      const { time, title, note, highlight, placeId } = req.body ?? {};
+      const patch: Partial<{ time: string; title: string; note: string; highlight: boolean; placeId: string | null }> = {};
       if (time !== undefined) {
         if (typeof time !== "string") { res.status(400).json({ error: "time muss ein string sein." }); return; }
         patch.time = time;
@@ -381,6 +387,10 @@ async function main() {
       if (highlight !== undefined) {
         if (typeof highlight !== "boolean") { res.status(400).json({ error: "highlight muss ein boolean sein." }); return; }
         patch.highlight = highlight;
+      }
+      if (placeId !== undefined) {
+        if (placeId !== null && typeof placeId !== "string") { res.status(400).json({ error: "placeId muss ein string oder null sein." }); return; }
+        patch.placeId = placeId;
       }
       const trip = await updateTimelineEntry(req.params.id, patch);
       res.json({ ok: true, trip });

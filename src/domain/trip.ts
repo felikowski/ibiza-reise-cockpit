@@ -42,6 +42,7 @@ export interface TimelineEntry {
   title: string;
   note: string;
   highlight: boolean;
+  placeId?: string;
 }
 
 export interface ItineraryDay {
