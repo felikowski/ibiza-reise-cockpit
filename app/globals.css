@@ -42,6 +42,8 @@ button { color: inherit; }
 .tab.active { color: var(--ink); border-bottom-color: var(--coral); font-weight: 700; }
 .tab-symbol { font-size: 15px; color: var(--coral); }
 .travelers { display: flex; padding-left: 12px; }
+.session-logout { margin-left: 14px; padding: 7px 13px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); font-size: 10px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.session-logout:hover { color: var(--ink); border-color: var(--ink); }
 .avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--paper); color: white; font-size: 11px; font-weight: 800; }
 .avatar-two { margin-left: -9px; background: var(--yellow); color: var(--ink); }
 .avatar-one { background: var(--sage); }
@@ -206,7 +208,7 @@ button { color: inherit; }
 @media (max-width: 760px) {
   .godless-sticker { top: 12px; right: 20px; padding: 7px 10px; gap: 6px; }
   .godless-sticker i { font-size: 15px; }
-  .topbar { height: 64px; padding: 0 18px; justify-content: space-between; }.brand { min-width: unset; }.brand strong { font-size: 20px; }.brand-mark { width: 36px; height: 36px; }.travelers { padding-left: 0; }.avatar { width: 30px; height: 30px; }
+  .topbar { height: 64px; padding: 0 18px; justify-content: space-between; }.brand { min-width: unset; }.brand strong { font-size: 20px; }.brand-mark { width: 36px; height: 36px; }.travelers { padding-left: 0; }.avatar { width: 30px; height: 30px; }.session-logout { margin-left: 8px; padding: 6px 10px; font-size: 9px; }
   .tabbar { position: fixed; z-index: 40; bottom: 0; left: 0; right: 0; height: 67px; overflow-x: auto; background: rgba(255,253,248,.96); border-top: 1px solid var(--line); padding: 0 8px; justify-content: flex-start; backdrop-filter: blur(15px); }.tab { flex: 0 0 72px; height: 100%; padding: 7px 2px 5px; flex-direction: column; justify-content: center; gap: 3px; border: 0; font-size: 8px; }.tab.active { color: var(--coral-deep); }.tab-symbol { display: block; font-size: 15px; }.mobile-section-title { display: block; position: sticky; top: 64px; z-index: 20; background: rgba(244,241,234,.94); border-bottom: 1px solid var(--line); padding: 8px 18px; color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .14em; }
   .page { padding-bottom: 77px; }.hero { grid-template-columns: 1fr 118px; gap: 18px; min-height: 375px; padding: 39px 20px 38px; }.hero h1 { font-size: 50px; }.hero-dates { font-size: 13px; }.hero-meta span { font-size: 8px; padding: 6px 8px; }.countdown-card { width: 118px; height: 176px; padding: 19px 12px; border-radius: 55px 55px 7px 7px; }.sun-disc { width: 13px; height: 13px; top: 19px; left: 17px; box-shadow: 0 0 0 4px rgba(237,184,77,.13); }.countdown-label { margin-top: 5px; font-size: 7px; }.countdown-number { font-size: 48px; }.countdown-days { font-size: 13px; }.countdown-rule { margin: 10px auto 7px; width: 29px; }.countdown-card p { font-size: 8px; }.sample-badge { font-size: 7px; }
   .content-grid { padding: 18px 14px 23px; gap: 12px; }.next-card, .weather-card, .itinerary-card, .prep-card, .budget-mini-card, .tip-card { grid-column: 1 / -1; }.card { border-radius: 7px; }.next-card, .weather-card, .itinerary-card, .prep-card, .budget-mini-card, .tip-card { padding-left: 20px; padding-right: 20px; }.time { font-size: 25px; }.flight-path { padding: 0 8px; }.itinerary-card { padding-bottom: 7px; }.readiness { justify-content: center; }

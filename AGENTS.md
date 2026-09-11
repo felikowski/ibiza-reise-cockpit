@@ -21,10 +21,15 @@ only. Communicate with the user in German unless asked otherwise.
 - `data/trip.example.json` — the seed data, copied onto the server's volume
   the first time it starts with no `trip.json` yet
 - small Express server in `server/` (own `server/Dockerfile`, runs via `tsx`,
-  no build step): `GET /api/trip` (public read), `GET /admin` +
-  `POST /admin/api/trip` (HTTP Basic Auth via `ADMIN_USERNAME`/
-  `ADMIN_PASSWORD` env vars — fails closed with 503 if unset), atomic writes
+  no build step): `GET /api/trip`, `GET /admin` + `POST /admin/api/trip`
+  (all behind Auth0 login via `server/auth.ts`/`express-openid-connect`,
+  fails closed with 503 if any `AUTH0_*` env var is unset), atomic writes
   with timestamped backups under `/data/backups/`
+- whole-app auth: `server/auth.ts` mounts Auth0 OIDC (`/auth/login`,
+  `/auth/logout`, `/auth/callback`) and gates every API/admin route via
+  `requireLogin`; the static frontend (no server code of its own) is gated
+  at the Traefik layer by a `forwardAuth` middleware that calls
+  `GET /auth/verify` on the api container — see `deploy/docker-compose.yml`
 - packing checklist state itself still lives in browser state only (resets on
   reload); only the trip *content* is persisted
 - weather is live, not admin-edited: `src/domain/open-meteo.ts` calls the
