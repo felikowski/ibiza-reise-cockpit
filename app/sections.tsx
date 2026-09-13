@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { Fragment, useId, useState } from "react";
 import type { DayTone, ItineraryDay, PackingItem, Place, ShoppingItem, TimelineEntry, Trip } from "@/src/domain/trip";
 import {
   budgetGrandTotal,
@@ -107,6 +107,31 @@ function patchTimelineEntry(entryId: string, patch: Partial<TimelineEntryFields>
 
 function removeTimelineEntry(entryId: string): Promise<Trip> {
   return submitTripRequest(`/api/itinerary/timeline/${entryId}`, "DELETE");
+}
+
+const URL_PATTERN = /((?:https?:\/\/|www\.)\S+)/gi;
+const TRAILING_PUNCTUATION = /[.,;:!?)\]}'"]+$/;
+
+function LinkifiedText({ text }: { text: string }) {
+  if (!text) return null;
+  const parts = text.split(URL_PATTERN);
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (index % 2 === 0) return part;
+        const trailingMatch = part.match(TRAILING_PUNCTUATION);
+        const trailing = trailingMatch ? trailingMatch[0] : "";
+        const url = trailing ? part.slice(0, -trailing.length) : part;
+        const href = url.startsWith("http") ? url : `https://${url}`;
+        return (
+          <Fragment key={index}>
+            <a href={href} target="_blank" rel="noopener noreferrer">{url}</a>
+            {trailing}
+          </Fragment>
+        );
+      })}
+    </>
+  );
 }
 
 interface PlaceFields {
@@ -542,7 +567,7 @@ export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (
                 <DayEditForm day={day} pending={pending} submitLabel="Speichern" onSave={(patch) => handleSaveDay(day.id, patch)} onCancel={() => setEditingDay(false)} />
               ) : (
                 <div className="day-detail-head">
-                  <div><span>{day.dateLabel} · Tag {dayIndex + 1}</span><h2>{day.title}</h2><p>{day.note}</p></div>
+                  <div><span>{day.dateLabel} · Tag {dayIndex + 1}</span><h2>{day.title}</h2><p><LinkifiedText text={day.note} /></p></div>
                   <div className="day-detail-actions">
                     <i className={`large-day-dot ${day.tone}`} />
                     <button type="button" className="day-edit-btn" onClick={() => setEditingDay(true)} disabled={pending}>Bearbeiten</button>
@@ -571,7 +596,7 @@ export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (
                       <i className={entry.highlight ? "accent" : ""} />
                       <div>
                         <b>{entry.title}</b>
-                        <span>{entry.note}</span>
+                        <span><LinkifiedText text={entry.note} /></span>
                         {place &&
                           (hasCoords(place) ? (
                             <a
