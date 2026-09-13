@@ -125,7 +125,7 @@ function LinkifiedText({ text }: { text: string }) {
         const href = url.startsWith("http") ? url : `https://${url}`;
         return (
           <Fragment key={index}>
-            <a href={href} target="_blank" rel="noopener noreferrer">{url}</a>
+            <a className="note-link" href={href} target="_blank" rel="noopener noreferrer">{url}</a>
             {trailing}
           </Fragment>
         );
