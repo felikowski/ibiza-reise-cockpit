@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useId, useState } from "react";
+import { Fragment, useEffect, useId, useState } from "react";
 import type { DayTone, ItineraryDay, PackingItem, Place, ShoppingItem, TimelineEntry, Trip } from "@/src/domain/trip";
 import {
   budgetGrandTotal,
@@ -131,6 +131,58 @@ function LinkifiedText({ text }: { text: string }) {
         );
       })}
     </>
+  );
+}
+
+function ConfirmDialog({
+  open,
+  title,
+  message,
+  confirmLabel = "Löschen",
+  cancelLabel = "Abbrechen",
+  pending,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  pending?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const headingId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onCancel]);
+
+  if (!open) return null;
+
+  return (
+    <div className="confirm-overlay" onClick={onCancel}>
+      <div
+        className="confirm-dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h3 id={headingId}>{title}</h3>
+        <p>{message}</p>
+        <div className="confirm-dialog-actions">
+          <button type="button" className="confirm-cancel" onClick={onCancel} disabled={pending}>{cancelLabel}</button>
+          <button type="button" className="confirm-delete" onClick={onConfirm} disabled={pending}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -478,9 +530,12 @@ export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (
   const [addingDay, setAddingDay] = useState(false);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [addingEntry, setAddingEntry] = useState(false);
+  const [confirmRemoveDay, setConfirmRemoveDay] = useState(false);
+  const [confirmRemoveEntryId, setConfirmRemoveEntryId] = useState<string | null>(null);
 
   const dayIndex = Math.min(selected, trip.itineraryDays.length - 1);
   const day = trip.itineraryDays[dayIndex];
+  const confirmingEntry = confirmRemoveEntryId ? day.timeline.find((entry) => entry.id === confirmRemoveEntryId) ?? null : null;
 
   const run = async (action: () => Promise<Trip>) => {
     setPending(true);
@@ -540,6 +595,18 @@ export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (
 
   const handleRemoveEntry = (entryId: string) => run(() => removeTimelineEntry(entryId));
 
+  const confirmRemoveDayNow = () => {
+    setConfirmRemoveDay(false);
+    handleRemoveDay(day.id);
+  };
+
+  const confirmRemoveEntryNow = () => {
+    if (!confirmRemoveEntryId) return;
+    const entryId = confirmRemoveEntryId;
+    setConfirmRemoveEntryId(null);
+    handleRemoveEntry(entryId);
+  };
+
   return (
     <section className="page inner-page">
       <PageIntro eyebrow="REISEPLAN" title="Genau dein Tempo." copy="Alle Etappen auf einen Blick — und direkt hier anpassbar." />
@@ -572,7 +639,7 @@ export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (
                     <i className={`large-day-dot ${day.tone}`} />
                     <button type="button" className="day-edit-btn" onClick={() => setEditingDay(true)} disabled={pending}>Bearbeiten</button>
                     {trip.itineraryDays.length > 1 && (
-                      <button type="button" className="day-remove-btn" onClick={() => handleRemoveDay(day.id)} disabled={pending}>Tag entfernen</button>
+                      <button type="button" className="day-remove-btn" onClick={() => setConfirmRemoveDay(true)} disabled={pending}>Tag entfernen</button>
                     )}
                   </div>
                 </div>
@@ -614,7 +681,7 @@ export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (
                       <div className="timeline-row-actions">
                         {entry.highlight && <em>Highlight</em>}
                         <button type="button" className="timeline-edit" aria-label={`${entry.title} bearbeiten`} onClick={() => setEditingEntryId(entry.id)} disabled={pending}>✎</button>
-                        <button type="button" className="packing-remove" aria-label={`${entry.title} entfernen`} onClick={() => handleRemoveEntry(entry.id)} disabled={pending}>×</button>
+                        <button type="button" className="packing-remove" aria-label={`${entry.title} entfernen`} onClick={() => setConfirmRemoveEntryId(entry.id)} disabled={pending}>×</button>
                       </div>
                     </div>
                   );
@@ -642,6 +709,23 @@ export function TravelPlan({ trip, onTripChange }: { trip: Trip; onTripChange: (
           <div><span>Freie Zeit</span><b>3 halbe Tage</b></div>
         </aside>
       </div>
+
+      <ConfirmDialog
+        open={confirmRemoveDay}
+        title="Tag entfernen?"
+        message={`„${day.title}" wird inklusive des gesamten Tagesablaufs endgültig gelöscht.`}
+        pending={pending}
+        onConfirm={confirmRemoveDayNow}
+        onCancel={() => setConfirmRemoveDay(false)}
+      />
+      <ConfirmDialog
+        open={!!confirmRemoveEntryId}
+        title="Eintrag entfernen?"
+        message={confirmingEntry ? `„${confirmingEntry.title}" wird aus dem Tagesablauf gelöscht.` : "Dieser Eintrag wird gelöscht."}
+        pending={pending}
+        onConfirm={confirmRemoveEntryNow}
+        onCancel={() => setConfirmRemoveEntryId(null)}
+      />
     </section>
   );
 }
@@ -968,6 +1052,7 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
   const filterOptions = ["Alle", NEARBY_FILTER, ...placeTypes(trip).slice(1)];
   const visible =
@@ -1007,6 +1092,14 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
     });
 
   const handleRemove = (placeId: string) => run(() => removePlace(placeId));
+
+  const confirmingPlace = confirmRemoveId ? trip.places.find((place) => place.id === confirmRemoveId) ?? null : null;
+  const confirmRemoveNow = () => {
+    if (!confirmRemoveId) return;
+    const placeId = confirmRemoveId;
+    setConfirmRemoveId(null);
+    handleRemove(placeId);
+  };
 
   return (
     <section className="page inner-page">
@@ -1070,7 +1163,7 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
                     >
                       ✎
                     </button>
-                    <button type="button" className="packing-remove" aria-label={`${place.name} entfernen`} onClick={() => handleRemove(place.id)} disabled={pending}>×</button>
+                    <button type="button" className="packing-remove" aria-label={`${place.name} entfernen`} onClick={() => setConfirmRemoveId(place.id)} disabled={pending}>×</button>
                   </div>
                 </div>
               </article>
@@ -1078,6 +1171,15 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!confirmRemoveId}
+        title="Ort entfernen?"
+        message={confirmingPlace ? `„${confirmingPlace.name}" wird aus deiner Merkliste gelöscht.` : "Dieser Ort wird gelöscht."}
+        pending={pending}
+        onConfirm={confirmRemoveNow}
+        onCancel={() => setConfirmRemoveId(null)}
+      />
     </section>
   );
 }
@@ -1247,6 +1349,7 @@ export function Packing({ trip, onTripChange }: { trip: Trip; onTripChange: (tri
   const [personTab, setPersonTab] = useState<string>(trip.packing.people[0]?.id ?? SHARED_TAB_ID);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmRemoveItem, setConfirmRemoveItem] = useState<PackingItem | null>(null);
   const packingStats = packingTotals(trip.packing);
   const groupTitles = trip.packing.groups.map((group) => group.title);
 
@@ -1267,6 +1370,13 @@ export function Packing({ trip, onTripChange }: { trip: Trip; onTripChange: (tri
   const assignItem = (item: PackingItem, personId: string | null) => run(() => patchPackingItem(item.id, { assignedTo: personId }));
   const addItem = (groupTitle: string, label: string, scope: "personal" | "shared", assignedTo: string | null) =>
     run(() => addPackingItem(groupTitle, label, scope, assignedTo));
+
+  const confirmRemoveItemNow = () => {
+    if (!confirmRemoveItem) return;
+    const item = confirmRemoveItem;
+    setConfirmRemoveItem(null);
+    removeItem(item);
+  };
 
   const tabs = [...trip.packing.people.map((person) => ({ id: person.id, label: person.name })), { id: SHARED_TAB_ID, label: "Gesamt" }];
 
@@ -1291,7 +1401,7 @@ export function Packing({ trip, onTripChange }: { trip: Trip; onTripChange: (tri
           groupTitles={groupTitles}
           pending={pending}
           onToggle={toggleChecked}
-          onRemove={removeItem}
+          onRemove={setConfirmRemoveItem}
           onAssign={assignItem}
           onAdd={(groupTitle, label, assignedTo) => addItem(groupTitle, label, "shared", assignedTo)}
         />
@@ -1302,10 +1412,19 @@ export function Packing({ trip, onTripChange }: { trip: Trip; onTripChange: (tri
           groupTitles={groupTitles}
           pending={pending}
           onToggle={toggleChecked}
-          onRemove={removeItem}
+          onRemove={setConfirmRemoveItem}
           onAdd={(groupTitle, label) => addItem(groupTitle, label, "personal", personTab)}
         />
       )}
+
+      <ConfirmDialog
+        open={!!confirmRemoveItem}
+        title="Eintrag entfernen?"
+        message={confirmRemoveItem ? `„${confirmRemoveItem.label}" wird von der Packliste gelöscht.` : "Dieser Eintrag wird gelöscht."}
+        pending={pending}
+        onConfirm={confirmRemoveItemNow}
+        onCancel={() => setConfirmRemoveItem(null)}
+      />
     </section>
   );
 }
@@ -1473,6 +1592,7 @@ function initials(name: string): string {
 export function Shopping({ trip, onTripChange }: { trip: Trip; onTripChange: (trip: Trip) => void }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmRemoveItem, setConfirmRemoveItem] = useState<ShoppingItem | null>(null);
   const shoppingStats = shoppingTotals(trip.shopping);
   const categoryTitles = trip.shopping.categories.map((category) => category.title);
   const categoriesWithItems = trip.shopping.categories.filter((category) => category.items.length > 0);
@@ -1492,6 +1612,13 @@ export function Shopping({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
   const toggleChecked = (item: ShoppingItem) => run(() => patchShoppingItem(item.id, { checked: !item.checked }));
   const removeItem = (item: ShoppingItem) => run(() => removeShoppingItem(item.id));
   const addItem = (categoryTitle: string, label: string) => run(() => addShoppingItem(categoryTitle, label));
+
+  const confirmRemoveItemNow = () => {
+    if (!confirmRemoveItem) return;
+    const item = confirmRemoveItem;
+    setConfirmRemoveItem(null);
+    removeItem(item);
+  };
 
   return (
     <section className="page inner-page">
@@ -1522,7 +1649,7 @@ export function Shopping({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
                     <input type="checkbox" checked={item.checked} onChange={() => toggleChecked(item)} disabled={pending} />
                     <i>{item.checked ? "✓" : ""}</i>
                     <span>{item.label}</span>
-                    <button type="button" className="packing-remove" aria-label={`${item.label} entfernen`} onClick={() => removeItem(item)} disabled={pending}>×</button>
+                    <button type="button" className="packing-remove" aria-label={`${item.label} entfernen`} onClick={() => setConfirmRemoveItem(item)} disabled={pending}>×</button>
                   </label>
                 ))}
               </div>
@@ -1532,6 +1659,15 @@ export function Shopping({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
       )}
 
       <ShoppingAddForm categoryTitles={categoryTitles} pending={pending} onAdd={addItem} />
+
+      <ConfirmDialog
+        open={!!confirmRemoveItem}
+        title="Eintrag entfernen?"
+        message={confirmRemoveItem ? `„${confirmRemoveItem.label}" wird von der Einkaufsliste gelöscht.` : "Dieser Eintrag wird gelöscht."}
+        pending={pending}
+        onConfirm={confirmRemoveItemNow}
+        onCancel={() => setConfirmRemoveItem(null)}
+      />
     </section>
   );
 }
