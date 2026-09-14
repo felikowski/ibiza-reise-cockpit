@@ -185,7 +185,7 @@ button { color: inherit; }
 .packing-add { max-width: calc(1400px - 9vw); margin: 15px auto 0; padding: 16px 20px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }.packing-add input, .packing-add select { border: 1px solid var(--line); border-radius: 6px; background: var(--paper); padding: 9px 12px; font-size: 10px; color: var(--ink); }.packing-add input { flex: 1 1 200px; }.packing-add button { border: 0; background: var(--coral-deep); color: white; padding: 9px 18px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; }.packing-add button:disabled { opacity: .5; cursor: default; }
 
 .discover-toolbar { max-width: 1400px; margin: 24px auto 14px; padding: 0 max(4.5vw,28px); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.discover-toolbar .filter-row { margin: 0; padding: 0; flex: 1 1 auto; }
+.discover-toolbar .filter-row { margin: 0; padding: 0; flex: 1 1 auto; min-width: 0; }
 .route-trigger { flex: 0 0 auto; border: 1px solid var(--coral-deep); background: var(--coral-deep); color: white; padding: 8px 18px; border-radius: 99px; cursor: pointer; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
 .route-trigger:hover { background: var(--coral); border-color: var(--coral); }
 .place-card-routable { cursor: pointer; }
@@ -193,7 +193,7 @@ button { color: inherit; }
 .route-badge { position: absolute; top: 8px; left: 8px; z-index: 2; width: 22px; height: 22px; border-radius: 50%; background: var(--coral-deep); color: white; display: grid; place-items: center; font: 700 11px var(--sans); box-shadow: 0 3px 8px rgba(44,52,48,.3); }
 .place-card { position: relative; }
 
-.route-modal-overlay { position: fixed; inset: 0; background: rgba(34,50,45,.45); display: grid; place-items: center; z-index: 100; padding: 20px; }
+.route-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; background: rgba(34,50,45,.45); display: grid; place-items: center; z-index: 1000; padding: 20px; }
 .route-modal { width: 100%; max-width: 440px; max-height: 86vh; overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 22px; box-shadow: 0 24px 60px rgba(34,50,45,.28); display: flex; flex-direction: column; gap: 16px; }
 .route-modal-header { display: flex; align-items: center; justify-content: space-between; }
 .route-modal-header h3 { margin: 0; font: 700 19px var(--serif); }
