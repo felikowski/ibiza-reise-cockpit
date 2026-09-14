@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Place } from "@/src/domain/trip";
 
 export type TravelMode = "driving" | "walking" | "bicycling" | "transit";
@@ -131,7 +132,17 @@ export function RouteModal({
     }
   };
 
-  return (
+  // RouteModal is only ever mounted client-side (the person has to tap the
+  // "Routenplaner" button first), so by the time this runs `document`
+  // already exists — no effect/state indirection needed to detect that.
+  if (typeof document === "undefined") return null;
+
+  // Portal straight into <body>: this can end up nested under ancestors
+  // that apply a transform/animation, which per spec turns that ancestor
+  // into the containing block for position:fixed descendants — breaking
+  // "fixed to the viewport" and leaving the modal stuck mid-page instead of
+  // pinned on screen. Rendering outside the tree sidesteps that entirely.
+  return createPortal(
     <div className="route-modal-overlay" onClick={onClose}>
       <div
         className="route-modal"
@@ -214,6 +225,7 @@ export function RouteModal({
           <p className="route-hint">Füge mindestens zwei Orte mit Koordinaten hinzu, um eine Route zu erstellen.</p>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
