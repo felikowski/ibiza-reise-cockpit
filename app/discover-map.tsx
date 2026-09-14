@@ -51,8 +51,22 @@ function escapeHtml(value: string): string {
 
 /** Draws the home + place markers and returns their combined bounds. Doesn't
  * touch the map's viewport itself — callers decide whether/when to fit it,
- * so switching a filter can swap pins without yanking the camera around. */
-async function renderMarkers(map: LeafletMap, layer: LayerGroup, home: MapHome, places: Place[], mapProvider: MapProvider) {
+ * so switching a filter can swap pins without yanking the camera around.
+ *
+ * `openPlaceIdRef` remembers which place's popup was open before this
+ * (re-)render so it can be reopened afterwards — clearLayers()+redraw would
+ * otherwise silently close whatever the person had open, which is jarring
+ * right after they tap "zur Route hinzufügen" inside that same popup. */
+async function renderMarkers(
+  map: LeafletMap,
+  layer: LayerGroup,
+  home: MapHome,
+  places: Place[],
+  mapProvider: MapProvider,
+  routeIds: string[],
+  onToggleRoute: (placeId: string) => void,
+  openPlaceIdRef: { current: string | null },
+) {
   const { default: L } = await import("leaflet");
   layer.clearLayers();
 
@@ -79,21 +93,52 @@ async function renderMarkers(map: LeafletMap, layer: LayerGroup, home: MapHome, 
       iconAnchor: [12, 24],
       popupAnchor: [0, -22],
     });
+    const inRoute = routeIds.includes(place.id);
     const popup =
       `<h3>${escapeHtml(place.name)}</h3><p class="popup-meta">${escapeHtml(place.type)} · ${escapeHtml(place.area)}</p>` +
       (place.note ? `<p>${escapeHtml(place.note)}</p>` : "") +
-      `<a href="${placeMapsUrl(place, mapProvider)}" target="_blank" rel="noopener noreferrer">In ${mapProvider === "apple" ? "Apple Karten" : "Google Maps"} öffnen ↗</a>`;
-    L.marker([place.lat, place.lon], { icon }).addTo(layer).bindPopup(popup);
+      `<a href="${placeMapsUrl(place, mapProvider)}" target="_blank" rel="noopener noreferrer">In ${mapProvider === "apple" ? "Apple Karten" : "Google Maps"} öffnen ↗</a>` +
+      `<button type="button" class="popup-route-btn${inRoute ? " popup-route-btn-active" : ""}">${inRoute ? "Aus Route entfernen" : "Zur Route hinzufügen"}</button>`;
+    const marker = L.marker([place.lat, place.lon], { icon }).addTo(layer).bindPopup(popup);
+    marker.on("popupopen", (event) => {
+      openPlaceIdRef.current = place.id;
+      // Leaflet popups are plain HTML strings, not React — wire the button
+      // up by hand each time its markup is (re-)created.
+      const popupEl = event.popup.getElement();
+      const button = popupEl?.querySelector<HTMLButtonElement>(".popup-route-btn");
+      button?.addEventListener("click", () => onToggleRoute(place.id));
+    });
+    marker.on("popupclose", () => {
+      if (openPlaceIdRef.current === place.id) openPlaceIdRef.current = null;
+    });
+    if (openPlaceIdRef.current === place.id) marker.openPopup();
     bounds.extend([place.lat, place.lon]);
   }
 
   return bounds;
 }
 
-export default function DiscoverMap({ home, places, mapProvider }: { home: MapHome; places: Place[]; mapProvider: MapProvider }) {
+export default function DiscoverMap({
+  home,
+  places,
+  mapProvider,
+  routeIds,
+  onToggleRoute,
+}: {
+  home: MapHome;
+  places: Place[];
+  mapProvider: MapProvider;
+  routeIds: string[];
+  onToggleRoute: (placeId: string) => void;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const layerRef = useRef<LayerGroup | null>(null);
+  const openPlaceIdRef = useRef<string | null>(null);
+  const onToggleRouteRef = useRef(onToggleRoute);
+  useEffect(() => {
+    onToggleRouteRef.current = onToggleRoute;
+  }, [onToggleRoute]);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +155,7 @@ export default function DiscoverMap({ home, places, mapProvider }: { home: MapHo
       const layer = L.layerGroup().addTo(map);
       mapRef.current = map;
       layerRef.current = layer;
-      const bounds = await renderMarkers(map, layer, home, places, mapProvider);
+      const bounds = await renderMarkers(map, layer, home, places, mapProvider, routeIds, (id) => onToggleRouteRef.current(id), openPlaceIdRef);
       if (cancelled) return;
       map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 });
     });
@@ -127,8 +172,8 @@ export default function DiscoverMap({ home, places, mapProvider }: { home: MapHo
 
   useEffect(() => {
     if (!mapRef.current || !layerRef.current) return;
-    renderMarkers(mapRef.current, layerRef.current, home, places, mapProvider);
-  }, [home, places, mapProvider]);
+    renderMarkers(mapRef.current, layerRef.current, home, places, mapProvider, routeIds, (id) => onToggleRouteRef.current(id), openPlaceIdRef);
+  }, [home, places, mapProvider, routeIds]);
 
   return (
     <div

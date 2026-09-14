@@ -1123,7 +1123,7 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
       </div>
       {error && <p className="packing-error">{error}</p>}
       <div className="places-layout">
-        <DiscoverMap home={home} places={visible} mapProvider={settings.mapProvider} />
+        <DiscoverMap home={home} places={visible} mapProvider={settings.mapProvider} routeIds={routeIds} onToggleRoute={toggleRoutePlace} />
         <div className="place-grid">
           {adding ? (
             <PlaceEditForm
