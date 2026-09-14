@@ -25,6 +25,7 @@ import { parseISODate } from "@/src/domain/dates";
 import type { DailyWeather } from "@/src/domain/open-meteo";
 import { describeWeatherCode } from "@/src/domain/weather-codes";
 import DiscoverMap, { placeMapsUrl } from "./discover-map";
+import { RouteModal, DEFAULT_TRAVEL_MODE, type TravelMode } from "./route-planner";
 import { useTrip, type TabId, type WeatherState } from "./app-shell";
 
 async function submitTripRequest(url: string, method: string, body?: unknown): Promise<Trip> {
@@ -1053,6 +1054,16 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [routeIds, setRouteIds] = useState<string[]>([]);
+  const [travelMode, setTravelMode] = useState<TravelMode>(DEFAULT_TRAVEL_MODE);
+  const [routeModalOpen, setRouteModalOpen] = useState(false);
+
+  const toggleRoutePlace = (placeId: string) =>
+    setRouteIds((ids) => (ids.includes(placeId) ? ids.filter((id) => id !== placeId) : [...ids, placeId]));
+  const removeFromRoute = (placeId: string) => setRouteIds((ids) => ids.filter((id) => id !== placeId));
+  const routePlaces = routeIds
+    .map((id) => trip.places.find((place) => place.id === id))
+    .filter((place): place is Place => place !== undefined);
 
   const filterOptions = ["Alle", NEARBY_FILTER, ...placeTypes(trip).slice(1)];
   const visible =
@@ -1104,7 +1115,12 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
   return (
     <section className="page inner-page">
       <PageIntro eyebrow="ENTDECKEN" title="Buchten, Bars, Aussichtspunkte." copy="Deine Merkliste für Buchten, Dörfer, gutes Essen und die besten Aussichten." />
-      <div className="filter-row">{filterOptions.map((item) => <button key={item} onClick={() => setFilter(item)} className={filter === item ? "active" : ""}>{item}</button>)}</div>
+      <div className="discover-toolbar">
+        <div className="filter-row">{filterOptions.map((item) => <button key={item} onClick={() => setFilter(item)} className={filter === item ? "active" : ""}>{item}</button>)}</div>
+        <button type="button" className="route-trigger" onClick={() => setRouteModalOpen(true)}>
+          Routenplaner{routeIds.length > 0 ? ` (${routeIds.length})` : ""}
+        </button>
+      </div>
       {error && <p className="packing-error">{error}</p>}
       <div className="places-layout">
         <DiscoverMap home={home} places={visible} mapProvider={settings.mapProvider} />
@@ -1132,7 +1148,24 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
                 onCancel={() => setEditingId(null)}
               />
             ) : (
-              <article className="card place-card" key={place.id}>
+              <article
+                className={`card place-card${routeIds.includes(place.id) ? " place-card-in-route" : ""}${hasCoords(place) ? " place-card-routable" : ""}`}
+                key={place.id}
+                onClick={() => { if (hasCoords(place)) toggleRoutePlace(place.id); }}
+                role={hasCoords(place) ? "button" : undefined}
+                tabIndex={hasCoords(place) ? 0 : undefined}
+                onKeyDown={(event) => {
+                  if (!hasCoords(place)) return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    toggleRoutePlace(place.id);
+                  }
+                }}
+                title={hasCoords(place) ? (routeIds.includes(place.id) ? `${place.name} aus der Route entfernen` : `${place.name} zur Route hinzufügen`) : undefined}
+              >
+                {routeIds.includes(place.id) && (
+                  <span className="route-badge" aria-hidden="true">{routeIds.indexOf(place.id) + 1}</span>
+                )}
                 {place.image ? (
                   <img className="place-photo" src={place.image} alt="" loading="lazy" />
                 ) : (
@@ -1148,6 +1181,7 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={`${place.name} in ${settings.mapProvider === "apple" ? "Apple Karten" : "Google Maps"} öffnen`}
+                        onClick={(event) => event.stopPropagation()}
                       >
                         ↗
                       </a>
@@ -1158,12 +1192,20 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
                       type="button"
                       className="place-edit"
                       aria-label={`${place.name} bearbeiten`}
-                      onClick={() => { setEditingId(place.id); setAdding(false); }}
+                      onClick={(event) => { event.stopPropagation(); setEditingId(place.id); setAdding(false); }}
                       disabled={pending}
                     >
                       ✎
                     </button>
-                    <button type="button" className="packing-remove" aria-label={`${place.name} entfernen`} onClick={() => setConfirmRemoveId(place.id)} disabled={pending}>×</button>
+                    <button
+                      type="button"
+                      className="packing-remove"
+                      aria-label={`${place.name} entfernen`}
+                      onClick={(event) => { event.stopPropagation(); setConfirmRemoveId(place.id); }}
+                      disabled={pending}
+                    >
+                      ×
+                    </button>
                   </div>
                 </div>
               </article>
@@ -1180,6 +1222,17 @@ export function Discover({ trip, onTripChange }: { trip: Trip; onTripChange: (tr
         onConfirm={confirmRemoveNow}
         onCancel={() => setConfirmRemoveId(null)}
       />
+
+      {routeModalOpen && (
+        <RouteModal
+          places={routePlaces}
+          travelMode={travelMode}
+          onTravelModeChange={setTravelMode}
+          onReorder={setRouteIds}
+          onRemove={removeFromRoute}
+          onClose={() => setRouteModalOpen(false)}
+        />
+      )}
     </section>
   );
 }
