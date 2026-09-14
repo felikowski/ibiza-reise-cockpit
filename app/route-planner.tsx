@@ -31,14 +31,18 @@ export function buildGoogleMapsRouteUrl(places: RoutePlace[], travelMode: Travel
   const stops = places.filter(hasRouteCoords);
   if (stops.length < 2) return null;
 
-  const coord = (place: RoutePlace & { lat: number; lon: number }) => `${place.lat},${place.lon}`;
-  const origin = coord(stops[0]);
-  const destination = coord(stops[stops.length - 1]);
+  // A raw "lat,lng" pair carries no name, so Google Maps labels that stop
+  // "Markierter Standort" instead of the place — pass the name+area as a
+  // text query instead, same as the single-place "In Google Maps öffnen"
+  // link elsewhere, so every stop resolves to the actual place.
+  const query = (place: RoutePlace) => encodeURIComponent(`${place.name}, ${place.area}, Ibiza`);
+  const origin = query(stops[0]);
+  const destination = query(stops[stops.length - 1]);
   const waypoints = stops.slice(1, -1);
 
   let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
   if (waypoints.length > 0) {
-    url += `&waypoints=${waypoints.map(coord).join("|")}`;
+    url += `&waypoints=${waypoints.map(query).join("|")}`;
   }
   url += `&travelmode=${travelMode}`;
   return url;
